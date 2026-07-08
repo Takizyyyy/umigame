@@ -1,10 +1,38 @@
+import { judge } from "@/lib/ai";
 import { getPuzzle } from "@/lib/puzzles";
 import type { JudgeRequest, JudgeResponse } from "@/lib/types";
 
 const MAX_MESSAGE_LENGTH = 200;
 const MAX_QUESTIONS = 30;
 
+// 簡易レート制限: 同一IPから60秒に20回まで
+// (サーバーレスではインスタンスごとのメモリなので完全ではないが、
+//  連打や単純な悪用への抑止としては十分。個人デモの割り切り)
+const RATE_LIMIT = 20;
+const RATE_WINDOW_MS = 60_000;
+const requestLog = new Map<string, number[]>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = (requestLog.get(ip) ?? []).filter(
+    (t) => now - t < RATE_WINDOW_MS
+  );
+  if (timestamps.length >= RATE_LIMIT) return true;
+  timestamps.push(now);
+  requestLog.set(ip, timestamps);
+  return false;
+}
+
 export async function POST(request: Request) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
+  if (isRateLimited(ip)) {
+    const res: JudgeResponse = {
+      verdict: "unclear",
+      comment: "少し急ぎすぎ! ひと呼吸おいてから質問してね",
+    };
+    return Response.json(res);
+  }
+
   const body = (await request.json().catch(() => null)) as JudgeRequest | null;
 
   // 入力検証(不正なリクエストは400で弾く)
@@ -40,11 +68,30 @@ export async function POST(request: Request) {
     return Response.json({ error: "invalid message" }, { status: 400 });
   }
 
-  // TODO(Day 4-5): ここを lib/ai.ts のAI判定に差し替える。
-  // それまでは常に unclear を返すモック。
-  const res: JudgeResponse = {
-    verdict: "unclear",
-    comment: "(AI未接続のモック応答です)",
-  };
-  return Response.json(res);
+  try {
+    const { verdict, comment } = await judge({
+      question: puzzle.question,
+      truth: puzzle.truth,
+      keyPoints: puzzle.keyPoints,
+      playerMessage: body.message,
+    });
+
+    const res: JudgeResponse = {
+      verdict,
+      comment,
+      // 正解のときだけ真相を開示する
+      ...(verdict === "correct" && {
+        reveal: { truth: puzzle.truth, trivia: puzzle.trivia },
+      }),
+    };
+    return Response.json(res);
+  } catch (e) {
+    // AI側のエラー(レート制限・障害など)はゲームを止めず unclear で流す
+    console.error("judge failed:", e);
+    const res: JudgeResponse = {
+      verdict: "unclear",
+      comment: "今ちょっと混み合ってるみたい。少し待ってもう一度!",
+    };
+    return Response.json(res);
+  }
 }
