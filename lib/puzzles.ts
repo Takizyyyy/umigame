@@ -5,13 +5,15 @@ import type { Puzzle, PuzzleMeta } from "@/lib/types";
 
 const puzzles = puzzlesData as Puzzle[];
 
-// 一覧表示用: 真相を含まない情報だけ返す
+// 一覧表示用: 真相・ヒント・出典を含まない情報だけ返す
 export function getPuzzleMetas(): PuzzleMeta[] {
-  return puzzles.map(({ id, title, difficulty, question }) => ({
+  return puzzles.map(({ id, title, difficulty, question, genre, hints }) => ({
     id,
     title,
     difficulty,
     question,
+    genre,
+    hintCount: hints.length,
   }));
 }
 

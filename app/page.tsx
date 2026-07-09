@@ -1,5 +1,16 @@
 import Link from "next/link";
 import { getPuzzleMetas } from "@/lib/puzzles";
+import type { Genre } from "@/lib/types";
+import RandomPickButton from "./RandomPickButton";
+
+// ジャンルを表示する順番
+const GENRE_ORDER: Genre[] = [
+  "ことば",
+  "歴史",
+  "科学・技術",
+  "社会・経済",
+  "食・文化",
+];
 
 export default function Home() {
   const puzzles = getPuzzleMetas();
@@ -26,31 +37,42 @@ export default function Home() {
           </ol>
         </section>
 
-        <section className="mt-8">
+        <RandomPickButton ids={puzzles.map((p) => p.id)} />
+
+        <section className="mt-8 space-y-8">
           <h2 className="text-lg font-bold">問題をえらぶ</h2>
-          <ul className="mt-3 space-y-3">
-            {puzzles.map((p) => (
-              <li key={p.id}>
-                <Link
-                  href={`/play/${p.id}`}
-                  className="block rounded-xl border border-amber-200 bg-white p-4 shadow-sm transition hover:border-amber-400 hover:shadow"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold">{p.title}</span>
-                    <span className="text-sm text-amber-600">
-                      {"★".repeat(p.difficulty)}
-                      <span className="text-amber-200">
-                        {"★".repeat(3 - p.difficulty)}
-                      </span>
-                    </span>
-                  </div>
-                  <p className="mt-2 line-clamp-2 text-sm text-stone-500">
-                    {p.question}
-                  </p>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {GENRE_ORDER.filter((genre) =>
+            puzzles.some((p) => p.genre === genre)
+          ).map((genre) => (
+            <div key={genre}>
+              <h3 className="text-sm font-bold text-amber-700">{genre}</h3>
+              <ul className="mt-3 space-y-3">
+                {puzzles
+                  .filter((p) => p.genre === genre)
+                  .map((p) => (
+                    <li key={p.id}>
+                      <Link
+                        href={`/play/${p.id}`}
+                        className="block rounded-xl border border-amber-200 bg-white p-4 shadow-sm transition hover:border-amber-400 hover:shadow"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold">{p.title}</span>
+                          <span className="text-sm text-amber-600">
+                            {"★".repeat(p.difficulty)}
+                            <span className="text-amber-200">
+                              {"★".repeat(3 - p.difficulty)}
+                            </span>
+                          </span>
+                        </div>
+                        <p className="mt-2 line-clamp-2 text-sm text-stone-500">
+                          {p.question}
+                        </p>
+                      </Link>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          ))}
         </section>
       </main>
     </div>
