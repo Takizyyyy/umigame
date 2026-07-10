@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { JudgeResponse, PuzzleMeta } from "@/lib/types";
+import { readProgress, saveProgress } from "@/lib/progress";
 
 type ChatMessage = {
   role: "player" | "ai" | "hint";
@@ -99,6 +100,10 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
       if (data.verdict === "correct" && data.reveal) {
         setMessages((prev) => [...prev, { role: "ai", text: "正解!! 🎉" }]);
         setResult({ kind: "correct", ...data.reveal });
+        saveProgress(meta.id, {
+          status: "cleared",
+          questions: questionCount + 1,
+        });
         return;
       }
       if (data.verdict === "close") {
@@ -125,6 +130,10 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
     if (data.verdict === "correct" && data.reveal) {
       setMessages((prev) => [...prev, { role: "ai", text: "正解!! 🎉" }]);
       setResult({ kind: "correct", ...data.reveal });
+      saveProgress(meta.id, {
+        status: "cleared",
+        questions: questionCount + 1,
+      });
       return;
     }
 
@@ -163,6 +172,10 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
     setSending(false);
     if (data?.reveal) {
       setResult({ kind: "giveup", ...data.reveal });
+      // 既にクリア済みなら記録を上書きしない
+      if (readProgress()[meta.id]?.status !== "cleared") {
+        saveProgress(meta.id, { status: "revealed" });
+      }
     }
   }
 
@@ -173,7 +186,7 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
         <div className="mx-auto max-w-2xl">
           <div className="flex items-center justify-between gap-2">
             <Link href="/" className="text-sm text-amber-600 hover:underline">
-              ← 一覧へ
+              ← ホームへ
             </Link>
             <span className="text-sm text-stone-500">Q: {questionCount}</span>
           </div>
