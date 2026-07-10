@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Zen_Maru_Gothic } from "next/font/google";
+import { Zen_Kaku_Gothic_New } from "next/font/google";
 import "./globals.css";
 
-// 丸ゴシック体の日本語Webフォント(ビルド時に取り込んで自前配信されるため
+// 端正な角ゴシック体の日本語Webフォント(ビルド時に取り込んで自前配信されるため
 // 利用者のブラウザからGoogleへの通信は発生しない)
-const zenMaru = Zen_Maru_Gothic({
+const zenKaku = Zen_Kaku_Gothic_New({
   weight: ["400", "500", "700"],
   subsets: ["latin"],
-  variable: "--font-zen-maru",
+  variable: "--font-zen-kaku",
   display: "swap",
 });
 
@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" className={`${zenMaru.variable} h-full antialiased`}>
+    <html lang="ja" className={`${zenKaku.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

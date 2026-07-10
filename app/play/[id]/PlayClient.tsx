@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { JudgeResponse, PuzzleMeta } from "@/lib/types";
 import { readProgress, saveProgress } from "@/lib/progress";
 
@@ -23,6 +24,42 @@ const MAX_HINTS = 3;
 
 type Mode = "question" | "answer";
 
+// むずかしさの3点表示
+function DifficultyDots({ level }: { level: number }) {
+  return (
+    <span
+      className="flex items-center gap-1"
+      aria-label={`むずかしさ ${level} / 3`}
+    >
+      {[1, 2, 3].map((n) => (
+        <span
+          key={n}
+          className={`h-1.5 w-1.5 rounded-full ${
+            n <= level ? "bg-amber-600" : "bg-stone-200"
+          }`}
+        />
+      ))}
+    </span>
+  );
+}
+
+// 「考え中」の3つの点が順番に浮かぶインジケーター
+function ThinkingDots() {
+  const reduce = useReducedMotion();
+  return (
+    <span className="flex items-center gap-1 px-1 py-1" aria-label="考え中">
+      {[0, 1, 2].map((i) => (
+        <motion.span
+          key={i}
+          className="h-1.5 w-1.5 rounded-full bg-stone-400"
+          animate={reduce ? undefined : { y: [0, -4, 0] }}
+          transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15 }}
+        />
+      ))}
+    </span>
+  );
+}
+
 export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "ai", text: "質問をどうぞ。「はい/いいえ」で答えられる形でね!" },
@@ -41,6 +78,8 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
     trivia: string;
     sources: { title: string; url: string }[];
   } | null>(null);
+
+  const reduce = useReducedMotion();
 
   // 新しいメッセージが増えたらチャット欄を最下部までスクロール
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -100,7 +139,7 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
 
     if (mode === "answer") {
       if (data.verdict === "correct" && data.reveal) {
-        setMessages((prev) => [...prev, { role: "ai", text: "正解!! 🎉" }]);
+        setMessages((prev) => [...prev, { role: "ai", text: "正解!!" }]);
         setResult({ kind: "correct", ...data.reveal });
         saveProgress(meta.id, {
           status: "cleared",
@@ -130,7 +169,7 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
 
     // mode === "question"
     if (data.verdict === "correct" && data.reveal) {
-      setMessages((prev) => [...prev, { role: "ai", text: "正解!! 🎉" }]);
+      setMessages((prev) => [...prev, { role: "ai", text: "正解!!" }]);
       setResult({ kind: "correct", ...data.reveal });
       saveProgress(meta.id, {
         status: "cleared",
@@ -168,7 +207,7 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
 
   // クリア結果のシェア文(ネタバレなし: 問題名と回数だけ)
   function buildShareText() {
-    return `🍲 うんちくウミガメのスープ「${meta.title}」を質問${questionCount}回でクリア!\nhttps://umigame-chi.vercel.app/play/${meta.id}`;
+    return `うんちくウミガメのスープ「${meta.title}」を質問${questionCount}回でクリア!\nhttps://umigame-chi.vercel.app/play/${meta.id}`;
   }
 
   async function handleCopyShare() {
@@ -197,58 +236,64 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-amber-50 text-stone-800">
+    <div className="flex flex-1 flex-col">
       {/* 上部固定: 問題文 */}
-      <header className="border-b border-amber-200 bg-white px-4 py-3">
-        <div className="mx-auto max-w-2xl">
+      <header className="border-b border-stone-200 bg-[#fafaf8] px-5 py-4">
+        <div className="mx-auto max-w-3xl">
           <div className="flex items-center justify-between gap-2">
-            <Link href="/" className="text-sm text-amber-600 hover:underline">
-              ← ホームへ
+            <Link
+              href="/"
+              className="text-sm text-stone-400 transition hover:text-stone-900"
+            >
+              ← ホーム
             </Link>
-            <span className="text-sm text-stone-500">Q: {questionCount}</span>
+            <span className="text-sm text-stone-400">質問 {questionCount}</span>
           </div>
-          <h1 className="mt-1 font-bold">🍲 {meta.title}</h1>
-          <div className="mt-1 flex items-center gap-2 text-xs">
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 font-bold text-amber-700">
-              {meta.genre}
-            </span>
-            <span className="text-amber-600">
-              {"★".repeat(meta.difficulty)}
-              <span className="text-amber-200">
-                {"★".repeat(3 - meta.difficulty)}
-              </span>
-            </span>
+          <div className="mt-2 flex items-center gap-3">
+            <h1 className="text-lg font-bold tracking-tight">{meta.title}</h1>
+            <span className="text-xs text-stone-400">{meta.genre}</span>
+            <DifficultyDots level={meta.difficulty} />
           </div>
-          <p className="mt-1 text-sm leading-6 text-stone-600">
+          <p className="mt-2 max-w-[60ch] text-sm leading-7 text-stone-600">
             {meta.question}
           </p>
         </div>
       </header>
 
       {/* 中央: チャットログ */}
-      <main className="mx-auto w-full max-w-2xl flex-1 space-y-3 overflow-y-auto px-4 py-4">
+      <main className="mx-auto w-full max-w-3xl flex-1 space-y-3 overflow-y-auto px-5 py-5">
         {messages.map((m, i) => (
-          <div
+          <motion.div
             key={i}
-            className={m.role === "player" ? "flex justify-end" : "flex justify-start"}
+            initial={reduce ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className={
+              m.role === "player" ? "flex justify-end" : "flex justify-start"
+            }
           >
             <div
               className={
                 m.role === "player"
-                  ? "max-w-[80%] rounded-2xl rounded-br-sm bg-amber-500 px-4 py-2 text-white"
+                  ? "max-w-[80%] rounded-2xl rounded-br-md bg-stone-900 px-4 py-2.5 text-sm leading-7 text-white"
                   : m.role === "hint"
-                    ? "max-w-[80%] rounded-2xl border border-dashed border-amber-400 bg-amber-100 px-4 py-2 text-amber-800"
-                    : "max-w-[80%] rounded-2xl rounded-bl-sm border border-amber-200 bg-white px-4 py-2"
+                    ? "max-w-[80%] rounded-2xl rounded-bl-md border border-amber-600/25 bg-amber-50 px-4 py-2.5 text-sm leading-7 text-stone-800"
+                    : "max-w-[80%] rounded-2xl rounded-bl-md border border-stone-200 bg-white px-4 py-2.5 text-sm leading-7"
               }
             >
-              {m.role === "hint" ? `💡 ${m.text}` : m.text}
+              {m.role === "hint" && (
+                <span className="mb-0.5 block text-[11px] font-bold tracking-wide text-amber-700">
+                  ヒント
+                </span>
+              )}
+              {m.text}
             </div>
-          </div>
+          </motion.div>
         ))}
         {sending && (
           <div className="flex justify-start">
-            <div className="rounded-2xl rounded-bl-sm border border-amber-200 bg-white px-4 py-2 text-stone-400">
-              考え中…
+            <div className="rounded-2xl rounded-bl-md border border-stone-200 bg-white px-4 py-2.5">
+              <ThinkingDots />
             </div>
           </div>
         )}
@@ -256,34 +301,32 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
       </main>
 
       {/* 下部固定: 入力欄 */}
-      <footer className="border-t border-amber-200 bg-white px-4 py-3">
-        <div className="mx-auto max-w-2xl">
-          {/* モード切り替え */}
-          <div className="mb-2 flex overflow-hidden rounded-xl border border-amber-300">
-            <button
-              onClick={() => setMode("question")}
-              disabled={sending || !!result}
-              aria-pressed={mode === "question"}
-              className={
-                mode === "question"
-                  ? "flex-1 bg-amber-500 py-1.5 text-sm font-bold text-white"
-                  : "flex-1 bg-white py-1.5 text-sm text-amber-600"
-              }
-            >
-              質問
-            </button>
-            <button
-              onClick={() => setMode("answer")}
-              disabled={sending || !!result}
-              aria-pressed={mode === "answer"}
-              className={
-                mode === "answer"
-                  ? "flex-1 bg-amber-500 py-1.5 text-sm font-bold text-white"
-                  : "flex-1 bg-white py-1.5 text-sm text-amber-600"
-              }
-            >
-              解答
-            </button>
+      <footer className="border-t border-stone-200 bg-[#fafaf8] px-5 py-4">
+        <div className="mx-auto max-w-3xl">
+          {/* モード切り替え(選択中の面がスライドするピル) */}
+          <div className="mb-3 flex w-fit rounded-full border border-stone-200 bg-white p-1">
+            {(["question", "answer"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                disabled={sending || !!result}
+                aria-pressed={mode === m}
+                className={`relative rounded-full px-5 py-1.5 text-sm font-medium transition-colors ${
+                  mode === m ? "text-white" : "text-stone-500 hover:text-stone-900"
+                }`}
+              >
+                {mode === m && (
+                  <motion.span
+                    layoutId="mode-pill"
+                    className="absolute inset-0 rounded-full bg-stone-900"
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <span className="relative">
+                  {m === "question" ? "質問" : "解答"}
+                </span>
+              </button>
+            ))}
           </div>
 
           <div className="flex gap-2">
@@ -301,32 +344,32 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
               aria-label={mode === "question" ? "質問を入力" : "解答を入力"}
               placeholder={
                 mode === "question"
-                  ? "はい/いいえで答えられる質問(例: それは食べ物に関係ある?)"
-                  : "真相だと思う説明を書いて解答(例: 〇〇だったから△△した)"
+                  ? "はい/いいえで答えられる質問"
+                  : "真相だと思う説明を書いて解答"
               }
-              className="flex-1 rounded-xl border border-amber-300 px-4 py-2 outline-none focus:border-amber-500 disabled:bg-stone-100"
+              className="min-w-0 flex-1 rounded-full border border-stone-200 bg-white px-5 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-stone-400 disabled:opacity-50"
             />
             <button
               onClick={handleSend}
-              disabled={sending || !!result || input.trim().length === 0}
-              className="rounded-xl bg-amber-500 px-5 py-2 font-bold text-white transition hover:bg-amber-600 disabled:opacity-40"
+              disabled={sending || !!result || !input.trim()}
+              className="shrink-0 rounded-full bg-stone-900 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-stone-700 disabled:opacity-30"
             >
               {mode === "question" ? "質問する" : "解答する"}
             </button>
           </div>
 
-          <div className="mt-2 flex items-center justify-between">
+          <div className="mt-3 flex items-center justify-between text-xs">
             <button
               onClick={handleHint}
               disabled={sending || !!result || hintsUsed >= MAX_HINTS}
-              className="text-sm text-amber-600 underline hover:text-amber-700 disabled:opacity-40"
+              className="font-medium text-amber-700 transition hover:opacity-70 disabled:opacity-30"
             >
-              💡 ヒントを見る(残り{MAX_HINTS - hintsUsed})
+              ヒントを見る(残り{MAX_HINTS - hintsUsed})
             </button>
             <button
               onClick={handleGiveUp}
               disabled={sending || !!result}
-              className="text-sm text-stone-400 underline hover:text-stone-600 disabled:opacity-40"
+              className="text-stone-400 transition hover:text-stone-900 disabled:opacity-30"
             >
               ギブアップして真相を見る
             </button>
@@ -335,71 +378,90 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
       </footer>
 
       {/* 結果モーダル */}
-      {result && (
-        <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 p-4 animate-[fadein_0.2s_ease-out]">
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl animate-[pop_0.25s_ease-out]">
-            <h2 className="text-center text-2xl font-bold">
-              {result.kind === "correct"
-                ? `正解! 🎉(回数 ${questionCount} 回)`
-                : "ギブアップ…"}
-            </h2>
-            {result.kind === "correct" && (
-              <p className="mt-2 animate-bounce text-center text-3xl">🎉 🎊 ✨</p>
-            )}
-            <section className="mt-4">
-              <h3 className="font-bold text-amber-700">真相</h3>
-              <p className="mt-1 text-sm leading-7">{result.truth}</p>
-            </section>
-            <section className="mt-4 rounded-xl bg-amber-50 p-4">
-              <h3 className="font-bold text-amber-700">📚 今日のうんちく</h3>
-              <p className="mt-1 text-sm leading-7">{result.trivia}</p>
-            </section>
-            {result.sources.length > 0 && (
-              <section className="mt-4">
-                <h3 className="font-bold text-amber-700">📚 出典</h3>
-                <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
-                  {result.sources.map((s, i) => (
-                    <li key={i}>
-                      <a
-                        href={s.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-amber-600 underline hover:text-amber-700"
-                      >
-                        {s.title}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-            {result.kind === "correct" && (
-              <div className="mt-5 flex gap-2">
-                <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(buildShareText())}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 rounded-xl border border-amber-300 bg-white py-2.5 text-center text-sm font-bold text-amber-700 transition hover:bg-amber-100"
-                >
-                  🕊️ Xでシェア
-                </a>
-                <button
-                  onClick={handleCopyShare}
-                  className="flex-1 rounded-xl border border-amber-300 bg-white py-2.5 text-center text-sm font-bold text-amber-700 transition hover:bg-amber-100"
-                >
-                  {copied ? "✅ コピーしました!" : "📋 結果をコピー"}
-                </button>
-              </div>
-            )}
-            <Link
-              href="/"
-              className="mt-3 block rounded-xl bg-amber-500 py-3 text-center font-bold text-white transition hover:bg-amber-600"
+      <AnimatePresence>
+        {result && (
+          <motion.div
+            initial={reduce ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-10 flex items-center justify-center bg-stone-950/40 p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={reduce ? false : { opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-stone-200 bg-white p-7 shadow-xl shadow-stone-900/10"
             >
-              他の問題へ
-            </Link>
-          </div>
-        </div>
-      )}
+              <p className="text-[11px] font-bold tracking-widest text-amber-700">
+                {result.kind === "correct" ? "SOLVED" : "GIVE UP"}
+              </p>
+              <h2 className="mt-1 text-2xl font-bold tracking-tight">
+                {result.kind === "correct" ? "正解!" : "真相はこちら"}
+              </h2>
+              {result.kind === "correct" && (
+                <p className="mt-1 text-sm text-stone-400">
+                  質問 {questionCount} 回でクリア
+                </p>
+              )}
+
+              <section className="mt-6">
+                <h3 className="text-sm font-bold text-stone-400">真相</h3>
+                <p className="mt-2 text-sm leading-8">{result.truth}</p>
+              </section>
+              <section className="mt-5 rounded-2xl bg-stone-100/70 p-5">
+                <h3 className="text-sm font-bold text-stone-400">
+                  今日のうんちく
+                </h3>
+                <p className="mt-2 text-sm leading-8">{result.trivia}</p>
+              </section>
+              {result.sources.length > 0 && (
+                <section className="mt-5">
+                  <h3 className="text-sm font-bold text-stone-400">出典</h3>
+                  <ul className="mt-2 space-y-1.5 text-sm">
+                    {result.sources.map((s, i) => (
+                      <li key={i}>
+                        <a
+                          href={s.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-stone-600 underline underline-offset-4 transition hover:text-stone-900"
+                        >
+                          {s.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {result.kind === "correct" && (
+                <div className="mt-6 flex gap-2">
+                  <a
+                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(buildShareText())}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 rounded-full border border-stone-200 py-2.5 text-center text-sm font-medium transition hover:border-stone-400"
+                  >
+                    Xでシェア
+                  </a>
+                  <button
+                    onClick={handleCopyShare}
+                    className="flex-1 rounded-full border border-stone-200 py-2.5 text-center text-sm font-medium transition hover:border-stone-400"
+                  >
+                    {copied ? "コピーしました!" : "結果をコピー"}
+                  </button>
+                </div>
+              )}
+              <Link
+                href="/"
+                className="mt-3 block rounded-full bg-stone-900 py-3 text-center font-bold text-white transition-colors hover:bg-stone-700"
+              >
+                他の問題へ
+              </Link>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

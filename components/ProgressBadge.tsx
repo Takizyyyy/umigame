@@ -16,15 +16,17 @@ export default function ProgressBadge({ puzzleId }: { puzzleId: string }) {
 
   if (status === "cleared") {
     return (
-      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700">
-        ✅ クリア
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-600/30 px-2.5 py-0.5 text-[11px] font-medium text-amber-700">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-600" aria-hidden="true" />
+        クリア済み
       </span>
     );
   }
   if (status === "revealed") {
     return (
-      <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-bold text-stone-500">
-        👀 真相を見た
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 px-2.5 py-0.5 text-[11px] font-medium text-stone-400">
+        <span className="h-1.5 w-1.5 rounded-full bg-stone-300" aria-hidden="true" />
+        真相を見た
       </span>
     );
   }

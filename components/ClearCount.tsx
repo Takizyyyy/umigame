@@ -18,11 +18,11 @@ export default function ClearCount({ total }: { total: number }) {
     () => 0
   );
 
+  if (clearedCount === 0) return null;
+
   return (
-    <p className="mt-3 text-sm text-stone-500">
-      {clearedCount === 0
-        ? "まだクリアなし。1問目に挑戦!"
-        : `クリア ${clearedCount} / ${total}`}
+    <p className="text-sm text-stone-500">
+      クリア {clearedCount} <span className="text-stone-300">/</span> {total}
     </p>
   );
 }

@@ -2,26 +2,42 @@ import Link from "next/link";
 import type { PuzzleMeta } from "@/lib/types";
 import ProgressBadge from "./ProgressBadge";
 
-// 問題一覧カード(ジャンルページで使う)
+// むずかしさを3つの点で表す(●●○ のイメージ)
+function DifficultyDots({ level }: { level: number }) {
+  return (
+    <span
+      className="flex items-center gap-1"
+      aria-label={`むずかしさ ${level} / 3`}
+    >
+      {[1, 2, 3].map((n) => (
+        <span
+          key={n}
+          className={`h-1.5 w-1.5 rounded-full ${
+            n <= level ? "bg-amber-600" : "bg-stone-200"
+          }`}
+        />
+      ))}
+    </span>
+  );
+}
+
+// 問題一覧の1行(ジャンルページで使う)。ヘアラインで区切るリスト形式
 export default function PuzzleCard({ puzzle }: { puzzle: PuzzleMeta }) {
   return (
     <Link
       href={`/play/${puzzle.id}`}
-      className="block rounded-xl border border-amber-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md hover:shadow-amber-100 active:translate-y-0 active:scale-[0.99]"
+      className="group block px-1 py-5 transition-colors hover:bg-stone-100/60"
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-bold">{puzzle.title}</span>
-        <span className="text-sm text-amber-600">
-          {"★".repeat(puzzle.difficulty)}
-          <span className="text-amber-200">
-            {"★".repeat(3 - puzzle.difficulty)}
-          </span>
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-bold tracking-tight text-stone-900 transition-transform duration-300 group-hover:translate-x-1">
+          {puzzle.title}
         </span>
+        <DifficultyDots level={puzzle.difficulty} />
       </div>
-      <p className="mt-2 line-clamp-2 text-sm text-stone-500">
+      <p className="mt-1.5 line-clamp-1 text-sm text-stone-500">
         {puzzle.question}
       </p>
-      <div className="mt-2">
+      <div className="mt-2 empty:hidden">
         <ProgressBadge puzzleId={puzzle.id} />
       </div>
     </Link>

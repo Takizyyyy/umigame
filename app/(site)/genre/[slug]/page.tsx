@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getPuzzleMetas } from "@/lib/puzzles";
 import { GENRES, getGenreBySlug } from "@/lib/genres";
 import PuzzleCard from "@/components/PuzzleCard";
+import Reveal from "@/components/Reveal";
 
 // 5ジャンル分を静的生成
 export function generateStaticParams() {
@@ -37,25 +38,32 @@ export default async function GenrePage({
     .sort((a, b) => a.difficulty - b.difficulty);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
-      <Link href="/" className="text-sm text-amber-600 hover:underline">
-        ← ホームへ
-      </Link>
+    <div className="mx-auto max-w-3xl px-5 py-12 sm:py-16">
+      <Reveal>
+        <Link
+          href="/"
+          className="text-sm text-stone-400 transition hover:text-stone-900"
+        >
+          ← ホーム
+        </Link>
+        <h1 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">
+          {genre.name}
+        </h1>
+        <p className="mt-3 text-stone-500">
+          {genre.description}
+          <span className="ml-3 text-sm text-stone-400">
+            全{puzzles.length}問
+          </span>
+        </p>
+      </Reveal>
 
-      <header className="mt-4 text-center">
-        <p className="text-5xl">{genre.emoji}</p>
-        <h1 className="mt-3 text-2xl font-bold">{genre.name}</h1>
-        <p className="mt-2 text-sm text-stone-500">{genre.description}</p>
-        <p className="mt-1 text-xs text-stone-400">全{puzzles.length}問</p>
-      </header>
-
-      <ul className="mt-8 space-y-3">
-        {puzzles.map((p) => (
-          <li key={p.id}>
+      <div className="mt-10 divide-y divide-stone-200 border-y border-stone-200">
+        {puzzles.map((p, i) => (
+          <Reveal key={p.id} delay={i * 0.05}>
             <PuzzleCard puzzle={p} />
-          </li>
+          </Reveal>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

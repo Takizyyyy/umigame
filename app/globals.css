@@ -1,23 +1,25 @@
 @import "tailwindcss";
 
-/* テーマはライト固定(ページ全体がクリーム×アンバーの明るい配色のため、
-   OSのダークモード設定に引きずられて文字が見えなくなるのを防ぐ) */
+/* テーマはライト固定。白ベース+墨色の文字+琥珀のアクセント1色。
+   境界は影ではなくヘアライン(1pxの薄い線)で描く */
 :root {
-  --background: #fffbeb;
-  --foreground: #292524;
+  --background: #fafaf8;
+  --foreground: #1c1917;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-zen-maru);
+  --font-sans: var(--font-zen-kaku);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-zen-maru), "Hiragino Maru Gothic ProN", "Yu Gothic",
+  font-family: var(--font-zen-kaku), "Hiragino Kaku Gothic ProN", "Yu Gothic",
     sans-serif;
+  /* 日本語の見出しを美しく折り返す */
+  overflow-wrap: anywhere;
 }
 
 /* 結果モーダルの登場アニメーション */
@@ -33,11 +35,11 @@ body {
 @keyframes pop {
   from {
     opacity: 0;
-    transform: scale(0.85);
+    transform: scale(0.96) translateY(8px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) translateY(0);
   }
 }
 

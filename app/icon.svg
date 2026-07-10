@@ -1,5 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- ブラウザタブ用アイコン(鍋の絵文字) -->
-  <rect width="100" height="100" rx="20" fill="#fffbeb"/>
-  <text x="50" y="72" font-size="64" text-anchor="middle">🍲</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- ブラウザタブ用アイコン: 器から立ちのぼる湯気が「?」になっている線画 -->
+  <rect width="48" height="48" rx="10" fill="#fafaf8"/>
+  <g stroke="#1c1917" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M19.5 10.5 a5 5 0 1 1 7.6 4.2 c-2.2 1.3 -3.1 2.2 -3.1 4.3"/>
+    <path d="M7.5 29.5 H40.5"/>
+    <path d="M10.5 29.5 a13.5 13.5 0 0 0 27 0"/>
+    <path d="M19 44 h10"/>
+  </g>
+  <circle cx="24" cy="23.5" r="1.7" fill="#1c1917"/>
 </svg>
