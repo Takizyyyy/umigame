@@ -240,25 +240,6 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
             <h1 className="text-lg font-bold tracking-tight">{meta.title}</h1>
             <span className="text-xs text-stone-400">{meta.genre}</span>
             <DifficultyBadge level={meta.difficulty} />
-            <span className="flex-1" aria-hidden="true" />
-            {result ? (
-              !resultOpen && (
-                <button
-                  onClick={() => setResultOpen(true)}
-                  className="shrink-0 rounded-full bg-amber-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-amber-700"
-                >
-                  真相をもう一度見る
-                </button>
-              )
-            ) : (
-              <button
-                onClick={handleGiveUp}
-                disabled={sending}
-                className="shrink-0 rounded-full border border-stone-200 px-3.5 py-1.5 text-xs font-medium text-stone-500 transition hover:border-stone-400 hover:text-stone-900 disabled:opacity-30"
-              >
-                ギブアップして真相を見る
-              </button>
-            )}
           </div>
           <p className="mt-2 max-w-[60ch] text-sm leading-7 text-stone-600">
             {meta.question}
@@ -364,7 +345,7 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
             </button>
           </div>
 
-          <div className="mt-3 text-xs">
+          <div className="mt-3 flex items-center justify-between text-xs">
             <button
               onClick={handleHint}
               disabled={sending || !!result || hintsUsed >= MAX_HINTS}
@@ -372,6 +353,24 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
             >
               ヒントを見る(残り{MAX_HINTS - hintsUsed})
             </button>
+            {result ? (
+              !resultOpen && (
+                <button
+                  onClick={() => setResultOpen(true)}
+                  className="rounded-full bg-amber-600 px-3.5 py-1.5 font-bold text-white transition hover:bg-amber-700"
+                >
+                  真相をもう一度見る
+                </button>
+              )
+            ) : (
+              <button
+                onClick={handleGiveUp}
+                disabled={sending}
+                className="text-stone-400 transition hover:text-stone-900 disabled:opacity-30"
+              >
+                ギブアップして真相を見る
+              </button>
+            )}
           </div>
         </div>
       </footer>

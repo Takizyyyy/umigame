@@ -11,17 +11,17 @@ export default function PuzzleCard({ puzzle }: { puzzle: PuzzleMeta }) {
       className="group block px-1 py-5 transition-colors hover:bg-stone-100/60"
     >
       <div className="flex items-center justify-between gap-3">
-        <span className="font-bold tracking-tight text-stone-900 transition-transform duration-300 group-hover:translate-x-1">
-          {puzzle.title}
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="font-bold tracking-tight text-stone-900 transition-transform duration-300 group-hover:translate-x-1">
+            {puzzle.title}
+          </span>
+          <ProgressBadge puzzleId={puzzle.id} />
         </span>
         <DifficultyBadge level={puzzle.difficulty} />
       </div>
       <p className="mt-1.5 line-clamp-1 text-sm text-stone-500">
         {puzzle.question}
       </p>
-      <div className="mt-2 empty:hidden">
-        <ProgressBadge puzzleId={puzzle.id} />
-      </div>
     </Link>
   );
 }
