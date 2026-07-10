@@ -303,13 +303,16 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
 
       {/* 結果モーダル */}
       {result && (
-        <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 p-4 animate-[fadein_0.2s_ease-out]">
+          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl animate-[pop_0.25s_ease-out]">
             <h2 className="text-center text-2xl font-bold">
               {result.kind === "correct"
                 ? `正解! 🎉(回数 ${questionCount} 回)`
                 : "ギブアップ…"}
             </h2>
+            {result.kind === "correct" && (
+              <p className="mt-2 animate-bounce text-center text-3xl">🎉 🎊 ✨</p>
+            )}
             <section className="mt-4">
               <h3 className="font-bold text-amber-700">真相</h3>
               <p className="mt-1 text-sm leading-7">{result.truth}</p>
