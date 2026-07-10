@@ -4,7 +4,8 @@ import { GENRES } from "@/lib/genres";
 import RandomPickButton from "./RandomPickButton";
 import ClearCount from "@/components/ClearCount";
 import Reveal from "@/components/Reveal";
-import Logo from "@/components/Logo";
+import AnimatedLogo from "@/components/AnimatedLogo";
+import GenreIcon from "@/components/GenreIcon";
 
 export default function Home() {
   const puzzles = getPuzzleMetas();
@@ -15,7 +16,7 @@ export default function Home() {
       <section className="pt-16 pb-14 sm:pt-24 sm:pb-20">
         <Reveal>
           <div className="text-stone-900">
-            <Logo size={48} />
+            <AnimatedLogo size={56} />
           </div>
           <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
             答えは、
@@ -55,15 +56,20 @@ export default function Home() {
               <Reveal key={genre.slug} delay={i * 0.05}>
                 <Link
                   href={`/genre/${genre.slug}`}
-                  className="group flex items-center justify-between gap-4 px-1 py-6 transition-colors hover:bg-stone-100/60"
+                  className="group flex items-center justify-between gap-4 px-1 py-5 transition-colors hover:bg-stone-100/60"
                 >
-                  <div>
-                    <p className="text-lg font-bold tracking-tight text-stone-900 transition-transform duration-300 group-hover:translate-x-1">
-                      {genre.name}
-                    </p>
-                    <p className="mt-1 text-sm text-stone-500">
-                      {genre.description}
-                    </p>
+                  <div className="flex items-center gap-4">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-100/70 text-amber-800">
+                      <GenreIcon slug={genre.slug} />
+                    </span>
+                    <div>
+                      <p className="text-lg font-bold tracking-tight text-stone-900 transition-transform duration-300 group-hover:translate-x-1">
+                        {genre.name}
+                      </p>
+                      <p className="mt-0.5 text-sm text-stone-500">
+                        {genre.description}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-3 text-sm text-stone-400">
                     <span>{count}問</span>

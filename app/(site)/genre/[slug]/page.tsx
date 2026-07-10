@@ -5,6 +5,7 @@ import { getPuzzleMetas } from "@/lib/puzzles";
 import { GENRES, getGenreBySlug } from "@/lib/genres";
 import PuzzleCard from "@/components/PuzzleCard";
 import Reveal from "@/components/Reveal";
+import GenreIcon from "@/components/GenreIcon";
 
 // 5ジャンル分を静的生成
 export function generateStaticParams() {
@@ -46,9 +47,14 @@ export default async function GenrePage({
         >
           ← ホーム
         </Link>
-        <h1 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">
-          {genre.name}
-        </h1>
+        <div className="mt-6 flex items-center gap-4">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-amber-100/70 text-amber-800">
+            <GenreIcon slug={genre.slug} size={28} />
+          </span>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            {genre.name}
+          </h1>
+        </div>
         <p className="mt-3 text-stone-500">
           {genre.description}
           <span className="ml-3 text-sm text-stone-400">

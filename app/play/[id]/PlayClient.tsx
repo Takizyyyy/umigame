@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { JudgeResponse, PuzzleMeta } from "@/lib/types";
 import { readProgress, saveProgress } from "@/lib/progress";
+import DifficultyBadge from "@/components/DifficultyBadge";
 
 type ChatMessage = {
   role: "player" | "ai" | "hint";
@@ -23,25 +24,6 @@ const MAX_QUESTIONS = 30;
 const MAX_HINTS = 3;
 
 type Mode = "question" | "answer";
-
-// むずかしさの3点表示
-function DifficultyDots({ level }: { level: number }) {
-  return (
-    <span
-      className="flex items-center gap-1"
-      aria-label={`むずかしさ ${level} / 3`}
-    >
-      {[1, 2, 3].map((n) => (
-        <span
-          key={n}
-          className={`h-1.5 w-1.5 rounded-full ${
-            n <= level ? "bg-amber-600" : "bg-stone-200"
-          }`}
-        />
-      ))}
-    </span>
-  );
-}
 
 // 「考え中」の3つの点が順番に浮かぶインジケーター
 function ThinkingDots() {
@@ -249,10 +231,10 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
             </Link>
             <span className="text-sm text-stone-400">質問 {questionCount}</span>
           </div>
-          <div className="mt-2 flex items-center gap-3">
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <h1 className="text-lg font-bold tracking-tight">{meta.title}</h1>
             <span className="text-xs text-stone-400">{meta.genre}</span>
-            <DifficultyDots level={meta.difficulty} />
+            <DifficultyBadge level={meta.difficulty} />
           </div>
           <p className="mt-2 max-w-[60ch] text-sm leading-7 text-stone-600">
             {meta.question}
@@ -408,8 +390,8 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
                 <h3 className="text-sm font-bold text-stone-400">真相</h3>
                 <p className="mt-2 text-sm leading-8">{result.truth}</p>
               </section>
-              <section className="mt-5 rounded-2xl bg-stone-100/70 p-5">
-                <h3 className="text-sm font-bold text-stone-400">
+              <section className="mt-5 rounded-2xl bg-amber-50 p-5">
+                <h3 className="text-sm font-bold text-amber-700">
                   今日のうんちく
                 </h3>
                 <p className="mt-2 text-sm leading-8">{result.trivia}</p>
