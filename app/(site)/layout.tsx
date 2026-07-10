@@ -31,17 +31,7 @@ export default function SiteLayout({
       <main className="flex-1">{children}</main>
 
       <footer className="border-t border-stone-200 px-5 py-8 text-center text-xs text-stone-400">
-        <p>
-          <a
-            href="https://github.com/Takizyyyy/umigame"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-4 transition hover:text-stone-600"
-          >
-            GitHub
-          </a>
-        </p>
-        <p className="mt-2">Next.js + Gemini API で作りました</p>
+        <p>Next.js + Gemini API で作りました</p>
       </footer>
     </div>
   );
