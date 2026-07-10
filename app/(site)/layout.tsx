@@ -15,7 +15,7 @@ export default function SiteLayout({
             href="/"
             className="font-bold text-stone-800 transition hover:text-amber-700"
           >
-            🍲 ウンチクのスープ
+            🍲 うんちくウミガメのスープ
           </Link>
           <Link
             href="/howto"

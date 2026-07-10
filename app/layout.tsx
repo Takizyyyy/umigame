@@ -12,7 +12,7 @@ const zenMaru = Zen_Maru_Gothic({
 });
 
 export const metadata: Metadata = {
-  title: "ウンチクのスープ",
+  title: "うんちくウミガメのスープ",
   description:
     "答えがうんちくになっている水平思考クイズ。AIに「はい/いいえ」で質問しながら真相を当てよう。",
 };

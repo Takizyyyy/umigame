@@ -12,7 +12,7 @@ export default function Home() {
       <header className="text-center">
         <p className="text-5xl">🍲</p>
         <h1 className="mt-3 text-4xl font-bold tracking-tight">
-          ウンチクのスープ
+          うんちくウミガメのスープ
         </h1>
         <p className="mt-2 text-sm text-stone-500">
           答えが「うんちく」になっている水平思考クイズ

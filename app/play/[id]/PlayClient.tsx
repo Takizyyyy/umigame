@@ -168,7 +168,7 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
 
   // クリア結果のシェア文(ネタバレなし: 問題名と回数だけ)
   function buildShareText() {
-    return `🍲 ウンチクのスープ「${meta.title}」を質問${questionCount}回でクリア!\nhttps://umigame-chi.vercel.app/play/${meta.id}`;
+    return `🍲 うんちくウミガメのスープ「${meta.title}」を質問${questionCount}回でクリア!\nhttps://umigame-chi.vercel.app/play/${meta.id}`;
   }
 
   async function handleCopyShare() {

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "あそびかた | ウンチクのスープ",
+  title: "あそびかた | うんちくウミガメのスープ",
   description:
-    "水平思考クイズ「ウンチクのスープ」の遊び方。質問のコツ、ヒント、解答モードの使い方を紹介します。",
+    "水平思考クイズ「うんちくウミガメのスープ」の遊び方。質問のコツ、ヒント、解答モードの使い方を紹介します。",
 };
 
 // 質問のコツの例

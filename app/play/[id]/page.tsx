@@ -13,7 +13,7 @@ export async function generateMetadata({
   const meta = getPuzzleMeta(id);
   if (!meta) return {};
   return {
-    title: `${meta.title} | ウンチクのスープ`,
+    title: `${meta.title} | うんちくウミガメのスープ`,
     description: meta.question.slice(0, 60),
   };
 }

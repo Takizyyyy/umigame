@@ -19,7 +19,7 @@ export async function generateMetadata({
   const genre = getGenreBySlug(slug);
   if (!genre) return {};
   return {
-    title: `${genre.name}の問題 | ウンチクのスープ`,
+    title: `${genre.name}の問題 | うんちくウミガメのスープ`,
   };
 }
 
