@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getPuzzleMetas } from "@/lib/puzzles";
 import { GENRES } from "@/lib/genres";
+import { LEVELS } from "@/lib/levels";
+import DifficultyBadge from "@/components/DifficultyBadge";
 import RandomPickButton from "./RandomPickButton";
 import ClearCount from "@/components/ClearCount";
 import Reveal from "@/components/Reveal";
@@ -70,6 +72,48 @@ export default function Home() {
                         {genre.description}
                       </p>
                     </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 text-sm text-stone-400">
+                    <span>{count}問</span>
+                    <span
+                      aria-hidden="true"
+                      className="transition-transform duration-300 group-hover:translate-x-1"
+                    >
+                      →
+                    </span>
+                  </div>
+                </Link>
+              </Reveal>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* むずかしさ */}
+      <section className="border-t border-stone-200 py-14 sm:py-16">
+        <Reveal>
+          <h2 className="text-xl font-bold tracking-tight">
+            むずかしさからえらぶ
+          </h2>
+        </Reveal>
+        <div className="mt-4 divide-y divide-stone-200 border-y border-stone-200">
+          {LEVELS.map((level, i) => {
+            const count = puzzles.filter(
+              (p) => p.difficulty === level.level
+            ).length;
+            return (
+              <Reveal key={level.slug} delay={i * 0.05}>
+                <Link
+                  href={`/level/${level.slug}`}
+                  className="group flex items-center justify-between gap-4 px-1 py-5 transition-colors hover:bg-stone-100/60"
+                >
+                  <div className="flex items-center gap-4">
+                    <span className="w-20 shrink-0">
+                      <DifficultyBadge level={level.level} />
+                    </span>
+                    <p className="text-sm text-stone-500">
+                      {level.description}
+                    </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-3 text-sm text-stone-400">
                     <span>{count}問</span>
