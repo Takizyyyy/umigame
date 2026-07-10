@@ -263,6 +263,7 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
             <button
               onClick={() => setMode("question")}
               disabled={sending || !!result}
+              aria-pressed={mode === "question"}
               className={
                 mode === "question"
                   ? "flex-1 bg-amber-500 py-1.5 text-sm font-bold text-white"
@@ -274,6 +275,7 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
             <button
               onClick={() => setMode("answer")}
               disabled={sending || !!result}
+              aria-pressed={mode === "answer"}
               className={
                 mode === "answer"
                   ? "flex-1 bg-amber-500 py-1.5 text-sm font-bold text-white"
@@ -296,6 +298,7 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
               }}
               maxLength={200}
               disabled={sending || !!result}
+              aria-label={mode === "question" ? "質問を入力" : "解答を入力"}
               placeholder={
                 mode === "question"
                   ? "はい/いいえで答えられる質問(例: それは食べ物に関係ある?)"
