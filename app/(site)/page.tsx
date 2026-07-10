@@ -5,6 +5,7 @@ import { LEVELS } from "@/lib/levels";
 import DifficultyBadge from "@/components/DifficultyBadge";
 import RandomPickButton from "./RandomPickButton";
 import ClearCount from "@/components/ClearCount";
+import DailyPick from "@/components/DailyPick";
 import Reveal from "@/components/Reveal";
 import AnimatedLogo from "@/components/AnimatedLogo";
 import GenreIcon from "@/components/GenreIcon";
@@ -41,6 +42,10 @@ export default function Home() {
           <div className="mt-4 empty:hidden">
             <ClearCount total={puzzles.length} />
           </div>
+        </Reveal>
+
+        <Reveal delay={0.15} className="mt-12">
+          <DailyPick puzzles={puzzles} />
         </Reveal>
       </section>
 

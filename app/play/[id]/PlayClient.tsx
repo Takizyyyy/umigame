@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { JudgeResponse, PuzzleMeta } from "@/lib/types";
@@ -42,7 +43,14 @@ function ThinkingDots() {
   );
 }
 
-export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
+export default function PlayClient({
+  meta,
+  others,
+}: {
+  meta: PuzzleMeta;
+  others: { id: string; genre: string }[];
+}) {
+  const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "ai", text: "質問をどうぞ。「はい/いいえ」で答えられる形でね!" },
   ]);
@@ -204,6 +212,28 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
     } catch {
       // コピー未対応のブラウザでは何もしない
     }
+  }
+
+  // つぎの問題: 同ジャンルの未クリア → 他ジャンルの未クリア → その他 の順で選ぶ
+  function handleNextPuzzle() {
+    const progress = readProgress();
+    const candidates = others.filter((p) => p.id !== meta.id);
+    const pick = (list: { id: string }[]) =>
+      list.length > 0
+        ? list[Math.floor(Math.random() * list.length)].id
+        : null;
+
+    const nextId =
+      pick(
+        candidates.filter(
+          (p) => p.genre === meta.genre && !progress[p.id]
+        )
+      ) ??
+      pick(candidates.filter((p) => !progress[p.id])) ??
+      pick(candidates);
+
+    if (nextId) router.push(`/play/${nextId}`);
+    else router.push("/");
   }
 
   async function handleGiveUp() {
@@ -456,11 +486,17 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
               >
                 質問ログを確認する
               </button>
+              <button
+                onClick={handleNextPuzzle}
+                className="mt-2 block w-full rounded-full bg-stone-900 py-3 text-center font-bold text-white transition-colors hover:bg-stone-700"
+              >
+                つぎの問題へ
+              </button>
               <Link
                 href="/"
-                className="mt-2 block rounded-full bg-stone-900 py-3 text-center font-bold text-white transition-colors hover:bg-stone-700"
+                className="mt-4 block text-center text-sm text-stone-400 transition hover:text-stone-900"
               >
-                他の問題へ
+                ホームにもどる
               </Link>
             </motion.div>
           </motion.div>

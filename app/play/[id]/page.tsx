@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getPuzzleMeta } from "@/lib/puzzles";
+import { getPuzzleMeta, getPuzzleMetas } from "@/lib/puzzles";
 import PlayClient from "./PlayClient";
 
 // タブタイトルを問題名にする(問題文は公開情報なので冒頭を説明文に使ってよい)
@@ -29,5 +29,8 @@ export default async function PlayPage({
   const meta = getPuzzleMeta(id);
   if (!meta) notFound();
 
-  return <PlayClient meta={meta} />;
+  // 「つぎの問題へ」の候補に使う全問題のIDとジャンル(公開情報のみ)
+  const others = getPuzzleMetas().map((p) => ({ id: p.id, genre: p.genre }));
+
+  return <PlayClient meta={meta} others={others} />;
 }

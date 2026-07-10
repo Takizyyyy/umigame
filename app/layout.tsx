@@ -12,9 +12,20 @@ const zenKaku = Zen_Kaku_Gothic_New({
 });
 
 export const metadata: Metadata = {
+  // OGP画像などのURLを絶対パスにするための基準URL
+  metadataBase: new URL("https://umigame-chi.vercel.app"),
   title: "うんちくウミガメのスープ",
   description:
     "答えがうんちくになっている水平思考クイズ。AIに「はい/いいえ」で質問しながら真相を当てよう。",
+  openGraph: {
+    title: "うんちくウミガメのスープ",
+    description: "答えは、思わず話したくなる実話。AIと遊ぶ水平思考クイズ",
+    locale: "ja_JP",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({
