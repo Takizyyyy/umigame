@@ -1,28 +1,23 @@
 @import "tailwindcss";
 
+/* テーマはライト固定(ページ全体がクリーム×アンバーの明るい配色のため、
+   OSのダークモード設定に引きずられて文字が見えなくなるのを防ぐ) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fffbeb;
+  --foreground: #292524;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-zen-maru);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-zen-maru), "Hiragino Maru Gothic ProN", "Yu Gothic",
+    sans-serif;
 }
 
 /* 結果モーダルの登場アニメーション */
@@ -43,5 +38,15 @@ body {
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* 動きを減らす設定のユーザーにはアニメーションを止める */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

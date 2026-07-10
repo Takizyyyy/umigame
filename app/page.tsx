@@ -19,11 +19,11 @@ export default function Home() {
     <div className="flex-1 bg-amber-50 text-stone-800">
       <main className="mx-auto max-w-2xl px-4 py-10">
         <header className="text-center">
-          <p className="text-4xl">🍲</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight">
+          <p className="text-5xl">🍲</p>
+          <h1 className="mt-3 text-4xl font-bold tracking-tight">
             ウンチクのスープ
           </h1>
-          <p className="mt-1 text-sm text-stone-500">
+          <p className="mt-2 text-sm text-stone-500">
             答えが「うんちく」になっている水平思考クイズ
           </p>
         </header>
@@ -45,7 +45,10 @@ export default function Home() {
             puzzles.some((p) => p.genre === genre)
           ).map((genre) => (
             <div key={genre}>
-              <h3 className="text-sm font-bold text-amber-700">{genre}</h3>
+              <div className="flex items-center gap-3">
+                <h3 className="text-sm font-bold text-amber-700">{genre}</h3>
+                <div className="h-px flex-1 bg-amber-200" aria-hidden="true" />
+              </div>
               <ul className="mt-3 space-y-3">
                 {puzzles
                   .filter((p) => p.genre === genre)
@@ -53,7 +56,7 @@ export default function Home() {
                     <li key={p.id}>
                       <Link
                         href={`/play/${p.id}`}
-                        className="block rounded-xl border border-amber-200 bg-white p-4 shadow-sm transition hover:border-amber-400 hover:shadow"
+                        className="block rounded-xl border border-amber-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md hover:shadow-amber-100 active:translate-y-0 active:scale-[0.99]"
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-bold">{p.title}</span>
