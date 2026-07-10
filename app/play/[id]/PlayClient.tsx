@@ -53,13 +53,15 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
   const [sending, setSending] = useState(false);
   // シェア文をコピーした直後のフィードバック表示用
   const [copied, setCopied] = useState(false);
-  // 結果表示(正解 or ギブアップ)。null の間はプレイ中
+  // 結果(正解 or ギブアップ)。null の間はプレイ中
   const [result, setResult] = useState<{
     kind: "correct" | "giveup";
     truth: string;
     trivia: string;
     sources: { title: string; url: string }[];
   } | null>(null);
+  // 結果モーダルの表示/非表示(閉じて質問ログを見返し、また開ける)
+  const [resultOpen, setResultOpen] = useState(false);
 
   const reduce = useReducedMotion();
 
@@ -123,6 +125,7 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
       if (data.verdict === "correct" && data.reveal) {
         setMessages((prev) => [...prev, { role: "ai", text: "正解!!" }]);
         setResult({ kind: "correct", ...data.reveal });
+        setResultOpen(true);
         saveProgress(meta.id, {
           status: "cleared",
           questions: questionCount + 1,
@@ -153,6 +156,7 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
     if (data.verdict === "correct" && data.reveal) {
       setMessages((prev) => [...prev, { role: "ai", text: "正解!!" }]);
       setResult({ kind: "correct", ...data.reveal });
+      setResultOpen(true);
       saveProgress(meta.id, {
         status: "cleared",
         questions: questionCount + 1,
@@ -210,6 +214,7 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
     setSending(false);
     if (data?.reveal) {
       setResult({ kind: "giveup", ...data.reveal });
+      setResultOpen(true);
       // 既にクリア済みなら記録を上書きしない
       if (readProgress()[meta.id]?.status !== "cleared") {
         saveProgress(meta.id, { status: "revealed" });
@@ -235,6 +240,25 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
             <h1 className="text-lg font-bold tracking-tight">{meta.title}</h1>
             <span className="text-xs text-stone-400">{meta.genre}</span>
             <DifficultyBadge level={meta.difficulty} />
+            <span className="flex-1" aria-hidden="true" />
+            {result ? (
+              !resultOpen && (
+                <button
+                  onClick={() => setResultOpen(true)}
+                  className="shrink-0 rounded-full bg-amber-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-amber-700"
+                >
+                  真相をもう一度見る
+                </button>
+              )
+            ) : (
+              <button
+                onClick={handleGiveUp}
+                disabled={sending}
+                className="shrink-0 rounded-full border border-stone-200 px-3.5 py-1.5 text-xs font-medium text-stone-500 transition hover:border-stone-400 hover:text-stone-900 disabled:opacity-30"
+              >
+                ギブアップして真相を見る
+              </button>
+            )}
           </div>
           <p className="mt-2 max-w-[60ch] text-sm leading-7 text-stone-600">
             {meta.question}
@@ -340,7 +364,7 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
             </button>
           </div>
 
-          <div className="mt-3 flex items-center justify-between text-xs">
+          <div className="mt-3 text-xs">
             <button
               onClick={handleHint}
               disabled={sending || !!result || hintsUsed >= MAX_HINTS}
@@ -348,20 +372,13 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
             >
               ヒントを見る(残り{MAX_HINTS - hintsUsed})
             </button>
-            <button
-              onClick={handleGiveUp}
-              disabled={sending || !!result}
-              className="text-stone-400 transition hover:text-stone-900 disabled:opacity-30"
-            >
-              ギブアップして真相を見る
-            </button>
           </div>
         </div>
       </footer>
 
       {/* 結果モーダル */}
       <AnimatePresence>
-        {result && (
+        {result && resultOpen && (
           <motion.div
             initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -434,9 +451,15 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
                   </button>
                 </div>
               )}
+              <button
+                onClick={() => setResultOpen(false)}
+                className="mt-3 block w-full rounded-full border border-stone-200 py-2.5 text-center text-sm font-medium transition hover:border-stone-400"
+              >
+                質問ログを確認する
+              </button>
               <Link
                 href="/"
-                className="mt-3 block rounded-full bg-stone-900 py-3 text-center font-bold text-white transition-colors hover:bg-stone-700"
+                className="mt-2 block rounded-full bg-stone-900 py-3 text-center font-bold text-white transition-colors hover:bg-stone-700"
               >
                 他の問題へ
               </Link>
