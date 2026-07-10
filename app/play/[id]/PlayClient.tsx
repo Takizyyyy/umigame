@@ -32,6 +32,8 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
   const [questionCount, setQuestionCount] = useState(0);
   const [hintsUsed, setHintsUsed] = useState(0);
   const [sending, setSending] = useState(false);
+  // シェア文をコピーした直後のフィードバック表示用
+  const [copied, setCopied] = useState(false);
   // 結果表示(正解 or ギブアップ)。null の間はプレイ中
   const [result, setResult] = useState<{
     kind: "correct" | "giveup";
@@ -162,6 +164,21 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
     }
     setHintsUsed((n) => n + 1);
     setMessages((prev) => [...prev, { role: "hint", text: data.hint! }]);
+  }
+
+  // クリア結果のシェア文(ネタバレなし: 問題名と回数だけ)
+  function buildShareText() {
+    return `🍲 ウンチクのスープ「${meta.title}」を質問${questionCount}回でクリア!\nhttps://umigame-chi.vercel.app/play/${meta.id}`;
+  }
+
+  async function handleCopyShare() {
+    try {
+      await navigator.clipboard.writeText(buildShareText());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // コピー未対応のブラウザでは何もしない
+    }
   }
 
   async function handleGiveUp() {
@@ -353,9 +370,27 @@ export default function PlayClient({ meta }: { meta: PuzzleMeta }) {
                 </ul>
               </section>
             )}
+            {result.kind === "correct" && (
+              <div className="mt-5 flex gap-2">
+                <a
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(buildShareText())}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 rounded-xl border border-amber-300 bg-white py-2.5 text-center text-sm font-bold text-amber-700 transition hover:bg-amber-100"
+                >
+                  🕊️ Xでシェア
+                </a>
+                <button
+                  onClick={handleCopyShare}
+                  className="flex-1 rounded-xl border border-amber-300 bg-white py-2.5 text-center text-sm font-bold text-amber-700 transition hover:bg-amber-100"
+                >
+                  {copied ? "✅ コピーしました!" : "📋 結果をコピー"}
+                </button>
+              </div>
+            )}
             <Link
               href="/"
-              className="mt-6 block rounded-xl bg-amber-500 py-3 text-center font-bold text-white transition hover:bg-amber-600"
+              className="mt-3 block rounded-xl bg-amber-500 py-3 text-center font-bold text-white transition hover:bg-amber-600"
             >
               他の問題へ
             </Link>
