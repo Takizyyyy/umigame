@@ -18,10 +18,10 @@ export default function SiteLayout({
             🍲 ウンチクのスープ
           </Link>
           <Link
-            href="/about"
+            href="/howto"
             className="text-sm text-amber-600 hover:underline"
           >
-            このサイトについて
+            あそびかた
           </Link>
         </div>
       </header>

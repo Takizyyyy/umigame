@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async redirects() {
+    return [
+      // 旧「このサイトについて」ページ。内容は「あそびかた」に統合した
+      { source: "/about", destination: "/howto", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

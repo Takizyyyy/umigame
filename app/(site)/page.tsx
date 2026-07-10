@@ -54,14 +54,13 @@ export default function Home() {
           <li>「はい / いいえ」で答えられる質問をAIにぶつける</li>
           <li>真相を言い当てたらクリア! 正体は思わず話したくなる雑学</li>
         </ol>
+        <Link
+          href="/howto"
+          className="mt-3 inline-block font-bold text-amber-600 hover:underline"
+        >
+          くわしいあそびかた・質問のコツ →
+        </Link>
       </section>
-
-      <Link
-        href="/about"
-        className="mt-8 block rounded-xl border border-amber-200 bg-white p-4 text-center text-sm text-amber-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md hover:shadow-amber-100 active:translate-y-0 active:scale-[0.99]"
-      >
-        ⚙️ このサイトの仕組みを見る →
-      </Link>
     </div>
   );
 }
