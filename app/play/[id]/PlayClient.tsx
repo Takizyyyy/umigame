@@ -356,13 +356,14 @@ export default function PlayClient({
             ))}
           </div>
 
-          {/* 200字上限に近づいたら残量を知らせる(入力が黙って止まると不親切なため) */}
-          {input.length >= 140 && (
-            <div className="mb-1 text-right text-[11px] tabular-nums text-stone-400">
-              {input.length}/200
-            </div>
-          )}
+          {/* 文字数カウンター(200字上限を最初から見せておく) */}
+          <div className="mb-1 text-right text-[11px] tabular-nums text-stone-400">
+            {input.length}/200
+          </div>
           <div className="flex items-end gap-2">
+            {/* 文字サイズ: スマホ(sm未満)は16px(text-base)。
+                iOS Safariは16px未満の入力欄にフォーカスすると画面ごと自動ズームする仕様があり、
+                「チャットを開くと勝手にズームされる」の原因になるため */}
             <textarea
               ref={inputRef}
               rows={1}
@@ -383,7 +384,7 @@ export default function PlayClient({
                   ? "はい/いいえで答えられる質問"
                   : "真相だと思う説明を書いて解答"
               }
-              className="max-h-32 min-w-0 flex-1 resize-none overflow-y-auto rounded-3xl border border-stone-200 bg-white px-5 py-2.5 text-sm leading-6 outline-none transition placeholder:text-stone-400 focus:border-stone-400 disabled:opacity-50"
+              className="max-h-32 min-w-0 flex-1 resize-none overflow-y-auto rounded-3xl border border-stone-200 bg-white px-5 py-2.5 text-base leading-6 outline-none transition placeholder:text-stone-400 focus:border-stone-400 disabled:opacity-50 sm:text-sm"
             />
             <button
               onClick={handleSend}
