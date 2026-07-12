@@ -138,18 +138,11 @@ export async function POST(request: Request) {
     };
     return Response.json(res);
   } catch (e) {
-    // AI側のエラー(レート制限・障害など)はゲームを止めず流す
+    // AI側のエラー(レート制限・障害など)はゲームを止めず流す。
+    // 以前は wrong/unclear として返していたが、それだと「残念、真相はそれじゃない」と
+    // 誤った判定表示になり質問回数も消費してしまうため、busyとして区別する
     console.error("judge failed:", e);
-    const res: JudgeResponse =
-      body.action === "answer"
-        ? {
-            verdict: "wrong",
-            comment: "今ちょっと混み合ってるみたい。少し待ってもう一度!",
-          }
-        : {
-            verdict: "unclear",
-            comment: "今ちょっと混み合ってるみたい。少し待ってもう一度!",
-          };
+    const res: JudgeResponse = { busy: true };
     return Response.json(res);
   }
 }

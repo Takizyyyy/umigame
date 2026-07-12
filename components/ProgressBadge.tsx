@@ -7,11 +7,30 @@ import { readProgress, subscribeToProgress } from "@/lib/progress";
 // localStorage(外部ストア)を useSyncExternalStore で購読する。
 // サーバー側は必ず null を返す(getServerSnapshot)ことで、
 // ハイドレーション不一致エラーを起こさずにクライアントの値へ切り替えられる
+// このタブで遊びかけのログ(sessionStorage)があるか。
+// サーバー側は必ず false(getServerSnapshot)にしてハイドレーション不一致を避ける
+function readPlaying(puzzleId: string): boolean {
+  try {
+    const raw = sessionStorage.getItem(`umigame-play:${puzzleId}`);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    return Array.isArray(saved.messages) && saved.messages.length > 1 && !saved.result;
+  } catch {
+    return false;
+  }
+}
+
 export default function ProgressBadge({ puzzleId }: { puzzleId: string }) {
   const status = useSyncExternalStore(
     subscribeToProgress,
     () => readProgress()[puzzleId]?.status ?? null,
     () => null
+  );
+  const playing = useSyncExternalStore(
+    // sessionStorageは同一タブの外から変わらないので購読は空でよい
+    () => () => {},
+    () => readPlaying(puzzleId),
+    () => false
   );
 
   if (status === "cleared") {
@@ -27,6 +46,14 @@ export default function ProgressBadge({ puzzleId }: { puzzleId: string }) {
       <span className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 px-2.5 py-0.5 text-[11px] font-medium text-stone-400">
         <span className="h-1.5 w-1.5 rounded-full bg-stone-300" aria-hidden="true" />
         真相を見た
+      </span>
+    );
+  }
+  if (playing) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 px-2.5 py-0.5 text-[11px] font-medium text-stone-500">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />
+        つづきから
       </span>
     );
   }

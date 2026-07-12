@@ -41,6 +41,9 @@ export type JudgeResponse = {
   // "reveal" はギブアップ・正解時(判定ではなく真相開示)
   verdict?: Verdict | AnswerVerdict | "reveal";
   comment?: string;
+  // AI側が混雑・上限で判定できなかったとき true
+  // (誤った「不正解」表示や質問回数の消費をさせないための区別)
+  busy?: boolean;
   // correct / reveal のときだけ真相が入る
   reveal?: {
     truth: string;

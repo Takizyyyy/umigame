@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Reveal from "@/components/Reveal";
+import BackButton from "@/components/BackButton";
 
 export const metadata: Metadata = {
   title: "あそびかた | うんちくウミガメのスープ",
@@ -60,7 +61,8 @@ export default function HowToPage() {
   return (
     <div className="mx-auto max-w-3xl px-5 py-12 sm:py-16">
       <Reveal>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+        <BackButton />
+        <h1 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">
           あそびかた
         </h1>
         <p className="mt-5 max-w-[42ch] leading-8 text-stone-500">

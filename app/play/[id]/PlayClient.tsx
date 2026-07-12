@@ -83,6 +83,16 @@ export default function PlayClient({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
 
+  // のこり質問が5回になったら一度だけ知らせる(30回の壁に突然ぶつからないように)
+  useEffect(() => {
+    if (result || MAX_QUESTIONS - questionCount !== 5) return;
+    const notice = "(質問はのこり5回! ヒントやギブアップも考えてみてね)";
+    setMessages((prev) =>
+      // 復元されたログに既に含まれている場合は二重に出さない
+      prev.some((m) => m.text === notice) ? prev : [...prev, { role: "ai", text: notice }],
+    );
+  }, [questionCount, result]);
+
   // 進行中のログをsessionStorage(タブを閉じるまで残る)へ自動保存・復元する。
   // 「あそびかた」ページ等へ移動して戻ってきても、続きから遊べるようにするため
   const storageKey = `umigame-play:${meta.id}`;
@@ -183,6 +193,16 @@ export default function PlayClient({
       setMessages((prev) => [
         ...prev,
         { role: "ai", text: "通信エラー。もう一度試してね" },
+      ]);
+      return;
+    }
+
+    // AI側が混雑・上限で判定できなかったとき: 質問回数を消費させず、入力も返す
+    if (data.busy) {
+      setInput(text);
+      setMessages((prev) => [
+        ...prev,
+        { role: "ai", text: "今ちょっと混み合ってるみたい。少し待ってもう一度!" },
       ]);
       return;
     }
@@ -374,7 +394,9 @@ export default function PlayClient({
       </header>
 
       {/* 中央: チャットログ */}
-      <main className="mx-auto min-h-0 w-full max-w-3xl flex-1 space-y-3 overflow-y-auto px-5 py-5">
+      {/* overscroll-y-contain: ログを一番上まで見返して更に引っ張っても、
+          ブラウザのプルリフレッシュ(ページ再読み込み)を誤爆させない */}
+      <main className="mx-auto min-h-0 w-full max-w-3xl flex-1 space-y-3 overflow-y-auto overscroll-y-contain px-5 py-5">
         {messages.map((m, i) => (
           <motion.div
             key={i}
