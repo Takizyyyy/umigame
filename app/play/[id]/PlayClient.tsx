@@ -79,6 +79,16 @@ export default function PlayClient({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
 
+  // 入力欄を内容に合わせて自動で伸縮させる。
+  // 1行固定のinputだと、スマホで長い質問を打つと横に流れて先頭が読めなくなるため
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto"; // 一度縮めてから実際の高さを測る(削除時に縮むように)
+    el.style.height = `${el.scrollHeight}px`;
+  }, [input]);
+
   async function callJudge(payload: {
     action: "question" | "answer" | "hint" | "giveup";
     text?: string;
@@ -346,13 +356,22 @@ export default function PlayClient({
             ))}
           </div>
 
-          <div className="flex gap-2">
-            <input
-              type="text"
+          {/* 200字上限に近づいたら残量を知らせる(入力が黙って止まると不親切なため) */}
+          {input.length >= 140 && (
+            <div className="mb-1 text-right text-[11px] tabular-nums text-stone-400">
+              {input.length}/200
+            </div>
+          )}
+          <div className="flex items-end gap-2">
+            <textarea
+              ref={inputRef}
+              rows={1}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                // Enterで送信、Shift+Enterで改行。日本語変換確定のEnterは無視
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
                   handleSend();
                 }
               }}
@@ -364,7 +383,7 @@ export default function PlayClient({
                   ? "はい/いいえで答えられる質問"
                   : "真相だと思う説明を書いて解答"
               }
-              className="min-w-0 flex-1 rounded-full border border-stone-200 bg-white px-5 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-stone-400 disabled:opacity-50"
+              className="max-h-32 min-w-0 flex-1 resize-none overflow-y-auto rounded-3xl border border-stone-200 bg-white px-5 py-2.5 text-sm leading-6 outline-none transition placeholder:text-stone-400 focus:border-stone-400 disabled:opacity-50"
             />
             <button
               onClick={handleSend}
