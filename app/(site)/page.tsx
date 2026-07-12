@@ -113,7 +113,8 @@ export default function Home() {
                   className="group flex items-center justify-between gap-4 px-1 py-5 transition-colors hover:bg-stone-100/60"
                 >
                   <div className="flex items-center gap-4">
-                    <span className="w-20 shrink-0">
+                    {/* ジャンル行のタイトルと同じ「すっと右に動く」モーションをバッジにも */}
+                    <span className="w-20 shrink-0 transition-transform duration-300 group-hover:translate-x-1">
                       <DifficultyBadge level={level.level} />
                     </span>
                     <p className="text-sm text-stone-500">
