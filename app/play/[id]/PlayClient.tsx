@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { JudgeResponse, PuzzleMeta } from "@/lib/types";
 import { readProgress, saveProgress } from "@/lib/progress";
+import { decodeLog, encodeLog } from "@/lib/sharelog";
 import DifficultyBadge from "@/components/DifficultyBadge";
 
 type ChatMessage = {
@@ -61,6 +62,9 @@ export default function PlayClient({
   const [sending, setSending] = useState(false);
   // シェア文をコピーした直後のフィードバック表示用
   const [copied, setCopied] = useState(false);
+  const [copiedLog, setCopiedLog] = useState(false);
+  // シェアURL(#log=...)で開かれたときに表示する、他の人の質問ログ
+  const [sharedLog, setSharedLog] = useState<ChatMessage[] | null>(null);
   // 結果(正解 or ギブアップ)。null の間はプレイ中
   const [result, setResult] = useState<{
     kind: "correct" | "giveup";
@@ -78,6 +82,17 @@ export default function PlayClient({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
+
+  // シェアURLで開かれたら、URLから質問ログを復元して閲覧モーダルを出す
+  useEffect(() => {
+    const match = window.location.hash.match(/^#log=(.+)$/);
+    if (!match) return;
+    decodeLog(match[1]).then((data) => {
+      if (!data || data.puzzleId !== meta.id) return;
+      const roleOf = { p: "player", a: "ai", h: "hint" } as const;
+      setSharedLog(data.log.map((m) => ({ role: roleOf[m.r], text: m.t })));
+    });
+  }, [meta.id]);
 
   // 入力欄を内容に合わせて自動で伸縮させる。
   // 1行固定のinputだと、スマホで長い質問を打つと横に流れて先頭が読めなくなるため
@@ -130,6 +145,7 @@ export default function PlayClient({
     setSending(false);
 
     if (!data) {
+      setInput(text); // 打った文を消さずに入力欄へ戻す(打ち直しさせない)
       setMessages((prev) => [
         ...prev,
         { role: "ai", text: "通信エラー。もう一度試してね" },
@@ -224,6 +240,30 @@ export default function PlayClient({
     }
   }
 
+  // 質問ログを圧縮してURLに埋め込んだシェア文をコピーする
+  async function handleCopyLogShare() {
+    try {
+      const encoded = await encodeLog({
+        puzzleId: meta.id,
+        log: messages.map((m) => ({
+          r: m.role === "player" ? "p" : m.role === "hint" ? "h" : "a",
+          t: m.text,
+        })),
+      });
+      const url = `https://umigame-chi.vercel.app/play/${meta.id}#log=${encoded}`;
+      const head =
+        result?.kind === "correct"
+          ? `うんちくウミガメのスープ「${meta.title}」を質問${questionCount}回でクリア!`
+          : `うんちくウミガメのスープ「${meta.title}」に挑戦!`;
+      await navigator.clipboard.writeText(`${head}\n質問ログはこちら↓\n${url}`);
+      setCopiedLog(true);
+      setTimeout(() => setCopiedLog(false), 2000);
+    } catch {
+      // 圧縮API未対応の古いブラウザでは、ログなしの通常シェア文にフォールバック
+      await handleCopyShare();
+    }
+  }
+
   // つぎの問題: 同ジャンルの未クリア → 他ジャンルの未クリア → その他 の順で選ぶ
   function handleNextPuzzle() {
     const progress = readProgress();
@@ -274,7 +314,9 @@ export default function PlayClient({
             >
               ← ホーム
             </Link>
-            <span className="text-sm text-stone-400">質問 {questionCount}</span>
+            <span className="text-sm tabular-nums text-stone-400">
+              質問 {questionCount}/{MAX_QUESTIONS}
+            </span>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <h1 className="text-lg font-bold tracking-tight">{meta.title}</h1>
@@ -299,22 +341,35 @@ export default function PlayClient({
               m.role === "player" ? "flex justify-end" : "flex justify-start"
             }
           >
-            <div
-              className={
-                m.role === "player"
-                  ? "max-w-[80%] rounded-2xl rounded-br-md bg-stone-900 px-4 py-2.5 text-sm leading-7 text-white"
-                  : m.role === "hint"
+            {m.role === "player" ? (
+              // 自分の発言はタップで入力欄に戻せる(少し変えて聞き直す用)
+              <button
+                type="button"
+                onClick={() => {
+                  setInput(m.text);
+                  inputRef.current?.focus();
+                }}
+                title="タップで入力欄にコピー"
+                className="max-w-[80%] cursor-pointer rounded-2xl rounded-br-md bg-stone-900 px-4 py-2.5 text-left text-sm leading-7 text-white transition active:scale-[0.98]"
+              >
+                {m.text}
+              </button>
+            ) : (
+              <div
+                className={
+                  m.role === "hint"
                     ? "max-w-[80%] rounded-2xl rounded-bl-md border border-amber-600/25 bg-amber-50 px-4 py-2.5 text-sm leading-7 text-stone-800"
                     : "max-w-[80%] rounded-2xl rounded-bl-md border border-stone-200 bg-white px-4 py-2.5 text-sm leading-7"
-              }
-            >
-              {m.role === "hint" && (
-                <span className="mb-0.5 block text-[11px] font-bold tracking-wide text-amber-700">
-                  ヒント
-                </span>
-              )}
-              {m.text}
-            </div>
+                }
+              >
+                {m.role === "hint" && (
+                  <span className="mb-0.5 block text-[11px] font-bold tracking-wide text-amber-700">
+                    ヒント
+                  </span>
+                )}
+                {m.text}
+              </div>
+            )}
           </motion.div>
         ))}
         {sending && (
@@ -424,6 +479,72 @@ export default function PlayClient({
         </div>
       </footer>
 
+      {/* シェアURLで開かれたときの質問ログ閲覧モーダル */}
+      <AnimatePresence>
+        {sharedLog && (
+          <motion.div
+            initial={reduce ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-20 flex items-center justify-center bg-stone-950/40 p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={reduce ? false : { opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-stone-200 bg-white p-7 shadow-xl shadow-stone-900/10"
+            >
+              <p className="text-[11px] font-bold tracking-widest text-amber-700">
+                SHARED LOG
+              </p>
+              <h2 className="mt-1 text-xl font-bold tracking-tight">
+                シェアされた質問ログ
+              </h2>
+              <p className="mt-1 text-sm text-stone-400">
+                この問題に挑戦した人の質問と出題者のやりとりです(ヒント含む・真相は含まれません)
+              </p>
+              <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto rounded-2xl bg-stone-50 p-4">
+                {sharedLog.map((m, i) => (
+                  <div
+                    key={i}
+                    className={
+                      m.role === "player" ? "flex justify-end" : "flex justify-start"
+                    }
+                  >
+                    <div
+                      className={
+                        m.role === "player"
+                          ? "max-w-[80%] rounded-2xl rounded-br-md bg-stone-900 px-4 py-2.5 text-sm leading-7 text-white"
+                          : m.role === "hint"
+                            ? "max-w-[80%] rounded-2xl rounded-bl-md border border-amber-600/25 bg-amber-50 px-4 py-2.5 text-sm leading-7 text-stone-800"
+                            : "max-w-[80%] rounded-2xl rounded-bl-md border border-stone-200 bg-white px-4 py-2.5 text-sm leading-7"
+                      }
+                    >
+                      {m.role === "hint" && (
+                        <span className="mb-0.5 block text-[11px] font-bold tracking-wide text-amber-700">
+                          ヒント
+                        </span>
+                      )}
+                      {m.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  setSharedLog(null);
+                  // URLに残った#log=...を消して、リロードしても再表示されないようにする
+                  history.replaceState(null, "", window.location.pathname);
+                }}
+                className="mt-4 block w-full rounded-full bg-stone-900 py-3 text-center font-bold text-white transition-colors hover:bg-stone-700"
+              >
+                閉じて自分も挑戦する
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* 結果モーダル */}
       <AnimatePresence>
         {result && resultOpen && (
@@ -500,8 +621,16 @@ export default function PlayClient({
                 </div>
               )}
               <button
-                onClick={() => setResultOpen(false)}
+                onClick={handleCopyLogShare}
                 className="mt-3 block w-full rounded-full border border-stone-200 py-2.5 text-center text-sm font-medium transition hover:border-stone-400"
+              >
+                {copiedLog
+                  ? "コピーしました!"
+                  : "質問ログ付きでシェア(URLをコピー)"}
+              </button>
+              <button
+                onClick={() => setResultOpen(false)}
+                className="mt-2 block w-full rounded-full border border-stone-200 py-2.5 text-center text-sm font-medium transition hover:border-stone-400"
               >
                 質問ログを確認する
               </button>
