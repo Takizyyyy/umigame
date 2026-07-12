@@ -7,15 +7,21 @@ import type { AnswerVerdict, Verdict } from "@/lib/types";
 // 無料枠は「モデルごと」に1日の回数制限があるため、上限(429)や
 // 混雑(503)のときは次の候補モデルで再試行する(判定が完全に止まるのを防ぐ)
 // 注: gemini-2.0-flash は無料枠の上限が0(無料枠対象外)だったので候補に入れない
-const MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
+//
+// モデルの割り当ては用途別(枠の節約のため):
+// - 質問のはい/いいえ判定: 簡単な分類タスクなので、枠の大きい flash-lite を優先
+// - 解答の採点: 繊細な判定なので、賢い flash の少ない枠をここに温存する
+const QUESTION_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash"];
+const ANSWER_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
 
 async function generateWithFallback(
   ai: GoogleGenAI,
+  models: string[],
   contents: string,
   config: GenerateContentConfig
 ) {
   let lastError: unknown = null;
-  for (const model of MODELS) {
+  for (const model of models) {
     try {
       return await ai.models.generateContent({ model, contents, config });
     } catch (e) {
@@ -75,6 +81,7 @@ ${input.trivia}
 
   const response = await generateWithFallback(
     ai,
+    QUESTION_MODELS,
     `プレイヤーの発言: ${input.playerMessage}`,
     {
       systemInstruction,
@@ -157,6 +164,7 @@ ${input.trivia}
 
   const response = await generateWithFallback(
     ai,
+    ANSWER_MODELS,
     `プレイヤーの解答: ${input.playerMessage}`,
     {
       systemInstruction,
