@@ -83,6 +83,40 @@ export default function PlayClient({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
 
+  // 進行中のログをsessionStorage(タブを閉じるまで残る)へ自動保存・復元する。
+  // 「あそびかた」ページ等へ移動して戻ってきても、続きから遊べるようにするため
+  const storageKey = `umigame-play:${meta.id}`;
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      // 挨拶1件だけの初期状態は復元しない(意味がないため)
+      if (Array.isArray(saved.messages) && saved.messages.length > 1) {
+        setMessages(saved.messages);
+        setQuestionCount(saved.questionCount ?? 0);
+        setHintsUsed(saved.hintsUsed ?? 0);
+        setMode(saved.mode === "answer" ? "answer" : "question");
+        if (saved.result) setResult(saved.result);
+      }
+    } catch {
+      // 保存データが壊れていたら初期状態で始める
+    }
+    // 初回マウント時に1回だけ復元する
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        storageKey,
+        JSON.stringify({ messages, questionCount, hintsUsed, mode, result }),
+      );
+    } catch {
+      // 保存できない環境(プライベートモード等)では諦めて通常動作
+    }
+  }, [storageKey, messages, questionCount, hintsUsed, mode, result]);
+
   // シェアURLで開かれたら、URLから質問ログを復元して閲覧モーダルを出す
   useEffect(() => {
     const match = window.location.hash.match(/^#log=(.+)$/);
@@ -303,7 +337,9 @@ export default function PlayClient({
   }
 
   return (
-    <div className="flex flex-1 flex-col">
+    // h-dvh: 画面の高さに固定し、スクロールはチャット欄(main)の中だけで起こす。
+    // これで質問を見返しても入力欄が画面外に流れない
+    <div className="flex h-dvh flex-col">
       {/* 上部固定: 問題文 */}
       <header className="border-b border-stone-200 bg-[#fafaf8] px-5 py-4">
         <div className="mx-auto max-w-3xl">
@@ -314,9 +350,17 @@ export default function PlayClient({
             >
               ← ホーム
             </Link>
-            <span className="text-sm tabular-nums text-stone-400">
-              質問 {questionCount}/{MAX_QUESTIONS}
-            </span>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/howto"
+                className="text-sm text-stone-400 transition hover:text-stone-900"
+              >
+                あそびかた
+              </Link>
+              <span className="text-sm tabular-nums text-stone-400">
+                質問 {questionCount}/{MAX_QUESTIONS}
+              </span>
+            </div>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <h1 className="text-lg font-bold tracking-tight">{meta.title}</h1>
@@ -330,7 +374,7 @@ export default function PlayClient({
       </header>
 
       {/* 中央: チャットログ */}
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-3 overflow-y-auto px-5 py-5">
+      <main className="mx-auto min-h-0 w-full max-w-3xl flex-1 space-y-3 overflow-y-auto px-5 py-5">
         {messages.map((m, i) => (
           <motion.div
             key={i}

@@ -29,10 +29,6 @@ export default function SiteLayout({
       </header>
 
       <main className="flex-1">{children}</main>
-
-      <footer className="border-t border-stone-200 px-5 py-8 text-center text-xs text-stone-400">
-        <p>Next.js + Gemini API で作りました</p>
-      </footer>
     </div>
   );
 }
