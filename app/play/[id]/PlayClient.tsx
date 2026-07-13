@@ -74,6 +74,10 @@ export default function PlayClient({
   } | null>(null);
   // 結果モーダルの表示/非表示(閉じて質問ログを見返し、また開ける)
   const [resultOpen, setResultOpen] = useState(false);
+  // 問題文の開閉(スマホの縦空間を節約するため、ゲームが進んだら自動でたたむ)
+  const [questionOpen, setQuestionOpen] = useState(true);
+  // チャット欄が下端付近にあるか(見返しスクロール中はフッターを圧縮する)
+  const [nearBottom, setNearBottom] = useState(true);
 
   const reduce = useReducedMotion();
 
@@ -82,6 +86,20 @@ export default function PlayClient({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
+
+  // チャット欄のスクロール位置を監視し、下端付近かどうかを判定する
+  const mainRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+      setNearBottom(distance < 120);
+    };
+    handleScroll();
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // のこり質問が5回になったら一度だけ知らせる(30回の壁に突然ぶつからないように)
   useEffect(() => {
@@ -108,6 +126,10 @@ export default function PlayClient({
         setHintsUsed(saved.hintsUsed ?? 0);
         setMode(saved.mode === "answer" ? "answer" : "question");
         if (saved.result) setResult(saved.result);
+        // プレイヤーの発言が既にあるなら、続きから遊ぶ想定なので問題文はたたんでおく
+        if (saved.messages.some((m: ChatMessage) => m.role === "player")) {
+          setQuestionOpen(false);
+        }
       }
     } catch {
       // 保存データが壊れていたら初期状態で始める
@@ -207,6 +229,8 @@ export default function PlayClient({
       return;
     }
 
+    // 最初の送信が成功したら、問題文をたたんでチャット欄のスペースを広げる
+    if (questionCount === 0) setQuestionOpen(false);
     setQuestionCount((c) => c + 1);
 
     if (mode === "answer") {
@@ -366,7 +390,7 @@ export default function PlayClient({
           <div className="flex items-center justify-between gap-2">
             <Link
               href="/"
-              className="text-sm text-stone-400 transition hover:text-stone-900"
+              className="inline-flex items-center rounded-full border border-stone-200 bg-white px-3 py-1.5 text-sm text-stone-600 transition hover:border-stone-400"
             >
               ← ホーム
             </Link>
@@ -387,16 +411,30 @@ export default function PlayClient({
             <span className="text-xs text-stone-400">{meta.genre}</span>
             <DifficultyBadge level={meta.difficulty} />
           </div>
-          <p className="mt-2 max-w-[60ch] text-sm leading-7 text-stone-600">
-            {meta.question}
-          </p>
+          <button
+            type="button"
+            onClick={() => setQuestionOpen((open) => !open)}
+            aria-expanded={questionOpen}
+            className="mt-2 block max-w-[60ch] text-left text-sm leading-7 text-stone-600"
+          >
+            <span className={questionOpen ? "" : "line-clamp-2"}>
+              {meta.question}
+            </span>
+            <span className="mt-0.5 block text-xs font-medium text-stone-400">
+              {questionOpen ? "▴ たたむ" : "▾ 全文を見る"}
+            </span>
+          </button>
         </div>
       </header>
 
       {/* 中央: チャットログ */}
       {/* overscroll-y-contain: ログを一番上まで見返して更に引っ張っても、
           ブラウザのプルリフレッシュ(ページ再読み込み)を誤爆させない */}
-      <main className="mx-auto min-h-0 w-full max-w-3xl flex-1 space-y-3 overflow-y-auto overscroll-y-contain px-5 py-5">
+      <main
+        ref={mainRef}
+        className="mx-auto min-h-0 w-full max-w-3xl flex-1 space-y-3 overflow-y-auto overscroll-y-contain px-5 py-5"
+      >
+
         {messages.map((m, i) => (
           <motion.div
             key={i}
@@ -450,99 +488,122 @@ export default function PlayClient({
 
       {/* 下部固定: 入力欄 */}
       <footer className="border-t border-stone-200 bg-[#fafaf8] px-5 py-4">
-        <div className="mx-auto max-w-3xl">
-          {/* モード切り替え(選択中の面がスライドするピル) */}
-          <div className="mb-3 flex w-fit rounded-full border border-stone-200 bg-white p-1">
-            {(["question", "answer"] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
+        {result && !resultOpen ? (
+          // 真相を確認済み・ログを見返し中: 入力欄は不要なので細いバー1本にする
+          <div className="mx-auto flex max-w-3xl gap-2">
+            <button
+              onClick={() => setResultOpen(true)}
+              className="flex-1 rounded-full bg-amber-600 py-2.5 text-sm font-bold text-white transition hover:bg-amber-700"
+            >
+              真相をもう一度見る
+            </button>
+            <button
+              onClick={handleNextPuzzle}
+              className="flex-1 rounded-full bg-stone-900 py-2.5 text-sm font-bold text-white transition-colors hover:bg-stone-700"
+            >
+              つぎの問題へ
+            </button>
+          </div>
+        ) : (
+          <div className="mx-auto max-w-3xl">
+            {/* モード切り替え(選択中の面がスライドするピル)。
+                見返しスクロール中(下端から離れた)は非表示にして縦空間を空ける */}
+            <div
+              className={`overflow-hidden transition-[max-height,opacity] duration-200 ease-out ${
+                nearBottom ? "mb-3 max-h-16 opacity-100" : "mb-0 max-h-0 opacity-0"
+              }`}
+            >
+              <div className="flex w-fit rounded-full border border-stone-200 bg-white p-1">
+                {(["question", "answer"] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setMode(m)}
+                    disabled={sending || !!result}
+                    aria-pressed={mode === m}
+                    className={`relative rounded-full px-5 py-1.5 text-sm font-medium transition-colors ${
+                      mode === m ? "text-white" : "text-stone-500 hover:text-stone-900"
+                    }`}
+                  >
+                    {mode === m && (
+                      <motion.span
+                        layoutId="mode-pill"
+                        className="absolute inset-0 rounded-full bg-stone-900"
+                        transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                      />
+                    )}
+                    <span className="relative">
+                      {m === "question" ? "質問" : "解答"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 文字数カウンター(200字上限を最初から見せておく) */}
+            <div className="mb-1 text-right text-[11px] tabular-nums text-stone-400">
+              {input.length}/200
+            </div>
+            <div className="flex items-end gap-2">
+              {/* 文字サイズ: スマホ(sm未満)は16px(text-base)。
+                  iOS Safariは16px未満の入力欄にフォーカスすると画面ごと自動ズームする仕様があり、
+                  「チャットを開くと勝手にズームされる」の原因になるため */}
+              <textarea
+                ref={inputRef}
+                rows={1}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  // Enterで送信、Shift+Enterで改行。日本語変換確定のEnterは無視
+                  if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                maxLength={200}
                 disabled={sending || !!result}
-                aria-pressed={mode === m}
-                className={`relative rounded-full px-5 py-1.5 text-sm font-medium transition-colors ${
-                  mode === m ? "text-white" : "text-stone-500 hover:text-stone-900"
-                }`}
-              >
-                {mode === m && (
-                  <motion.span
-                    layoutId="mode-pill"
-                    className="absolute inset-0 rounded-full bg-stone-900"
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                  />
-                )}
-                <span className="relative">
-                  {m === "question" ? "質問" : "解答"}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* 文字数カウンター(200字上限を最初から見せておく) */}
-          <div className="mb-1 text-right text-[11px] tabular-nums text-stone-400">
-            {input.length}/200
-          </div>
-          <div className="flex items-end gap-2">
-            {/* 文字サイズ: スマホ(sm未満)は16px(text-base)。
-                iOS Safariは16px未満の入力欄にフォーカスすると画面ごと自動ズームする仕様があり、
-                「チャットを開くと勝手にズームされる」の原因になるため */}
-            <textarea
-              ref={inputRef}
-              rows={1}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                // Enterで送信、Shift+Enterで改行。日本語変換確定のEnterは無視
-                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                  e.preventDefault();
-                  handleSend();
+                aria-label={mode === "question" ? "質問を入力" : "解答を入力"}
+                placeholder={
+                  // スマホの16px表示でも1行に収まる長さにする(長いと途中で切れて見にくい)
+                  mode === "question" ? "はい/いいえで聞ける質問" : "推理した真相を書く"
                 }
-              }}
-              maxLength={200}
-              disabled={sending || !!result}
-              aria-label={mode === "question" ? "質問を入力" : "解答を入力"}
-              placeholder={
-                // スマホの16px表示でも1行に収まる長さにする(長いと途中で切れて見にくい)
-                mode === "question" ? "はい/いいえで聞ける質問" : "推理した真相を書く"
-              }
-              className="max-h-32 min-w-0 flex-1 resize-none overflow-y-auto rounded-3xl border border-stone-200 bg-white px-5 py-2.5 text-base leading-6 outline-none transition placeholder:text-stone-400 focus:border-stone-400 disabled:opacity-50 sm:text-sm"
-            />
-            <button
-              onClick={handleSend}
-              disabled={sending || !!result || !input.trim()}
-              className="shrink-0 rounded-full bg-stone-900 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-stone-700 disabled:opacity-30"
-            >
-              {mode === "question" ? "質問する" : "解答する"}
-            </button>
-          </div>
-
-          <div className="mt-3 flex items-center justify-between text-xs">
-            <button
-              onClick={handleHint}
-              disabled={sending || !!result || hintsUsed >= MAX_HINTS}
-              className="font-medium text-amber-700 transition hover:opacity-70 disabled:opacity-30"
-            >
-              ヒントを見る(残り{MAX_HINTS - hintsUsed})
-            </button>
-            {result ? (
-              !resultOpen && (
-                <button
-                  onClick={() => setResultOpen(true)}
-                  className="rounded-full bg-amber-600 px-3.5 py-1.5 font-bold text-white transition hover:bg-amber-700"
-                >
-                  真相をもう一度見る
-                </button>
-              )
-            ) : (
+                className="max-h-32 min-w-0 flex-1 resize-none overflow-y-auto rounded-3xl border border-stone-200 bg-white px-5 py-2.5 text-base leading-6 outline-none transition placeholder:text-stone-400 focus:border-stone-400 disabled:opacity-50 sm:text-sm"
+              />
               <button
-                onClick={handleGiveUp}
-                disabled={sending}
-                className="text-stone-400 transition hover:text-stone-900 disabled:opacity-30"
+                onClick={handleSend}
+                disabled={sending || !!result || !input.trim()}
+                className="shrink-0 rounded-full bg-stone-900 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-stone-700 disabled:opacity-30"
               >
-                ギブアップして真相を見る
+                {mode === "question" ? "質問する" : "解答する"}
               </button>
-            )}
+            </div>
+
+            {/* ヒント・ギブアップ行。見返しスクロール中は非表示 */}
+            <div
+              className={`overflow-hidden transition-[max-height,opacity] duration-200 ease-out ${
+                nearBottom ? "mt-3 max-h-10 opacity-100" : "mt-0 max-h-0 opacity-0"
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs">
+                <button
+                  onClick={handleHint}
+                  disabled={sending || !!result || hintsUsed >= MAX_HINTS}
+                  className="font-medium text-amber-700 transition hover:opacity-70 disabled:opacity-30"
+                >
+                  ヒントを見る(残り{MAX_HINTS - hintsUsed})
+                </button>
+                {!result && (
+                  <button
+                    onClick={handleGiveUp}
+                    disabled={sending}
+                    className="text-stone-400 transition hover:text-stone-900 disabled:opacity-30"
+                  >
+                    ギブアップして真相を見る
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </footer>
 
       {/* シェアURLで開かれたときの質問ログ閲覧モーダル */}
@@ -668,35 +729,36 @@ export default function PlayClient({
                 </section>
               )}
 
-              {result.kind === "correct" && (
-                <div className="mt-6 flex gap-2">
-                  <a
-                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(buildShareText())}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 rounded-full border border-stone-200 py-2.5 text-center text-sm font-medium transition hover:border-stone-400"
-                  >
-                    Xでシェア
-                  </a>
-                  <button
-                    onClick={handleCopyShare}
-                    className="flex-1 rounded-full border border-stone-200 py-2.5 text-center text-sm font-medium transition hover:border-stone-400"
-                  >
-                    {copied ? "コピーしました!" : "結果をコピー"}
-                  </button>
-                </div>
-              )}
-              <button
-                onClick={handleCopyLogShare}
-                className="mt-3 block w-full rounded-full border border-stone-200 py-2.5 text-center text-sm font-medium transition hover:border-stone-400"
-              >
-                {copiedLog
-                  ? "コピーしました!"
-                  : "質問ログ付きでシェア(URLをコピー)"}
-              </button>
+              {/* シェア行: 正解時は3つ横並び、ギブアップ時はログ付きURLのみ */}
+              <div className="mt-6 flex gap-2">
+                {result.kind === "correct" && (
+                  <>
+                    <a
+                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(buildShareText())}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 rounded-full border border-stone-200 py-2 text-center text-xs font-medium transition hover:border-stone-400 sm:text-sm"
+                    >
+                      Xでシェア
+                    </a>
+                    <button
+                      onClick={handleCopyShare}
+                      className="flex-1 rounded-full border border-stone-200 py-2 text-center text-xs font-medium transition hover:border-stone-400 sm:text-sm"
+                    >
+                      {copied ? "コピーしました!" : "結果をコピー"}
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={handleCopyLogShare}
+                  className="flex-1 rounded-full border border-stone-200 py-2 text-center text-xs font-medium transition hover:border-stone-400 sm:text-sm"
+                >
+                  {copiedLog ? "コピーしました!" : "ログ付きURL"}
+                </button>
+              </div>
               <button
                 onClick={() => setResultOpen(false)}
-                className="mt-2 block w-full rounded-full border border-stone-200 py-2.5 text-center text-sm font-medium transition hover:border-stone-400"
+                className="mt-3 block w-full rounded-full border border-stone-200 py-2.5 text-center text-sm font-medium transition hover:border-stone-400"
               >
                 質問ログを確認する
               </button>
