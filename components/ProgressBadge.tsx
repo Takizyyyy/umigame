@@ -7,11 +7,11 @@ import { readProgress, subscribeToProgress } from "@/lib/progress";
 // localStorage(外部ストア)を useSyncExternalStore で購読する。
 // サーバー側は必ず null を返す(getServerSnapshot)ことで、
 // ハイドレーション不一致エラーを起こさずにクライアントの値へ切り替えられる
-// このタブで遊びかけのログ(sessionStorage)があるか。
+// この端末に遊びかけのログ(localStorage)があるか。
 // サーバー側は必ず false(getServerSnapshot)にしてハイドレーション不一致を避ける
 function readPlaying(puzzleId: string): boolean {
   try {
-    const raw = sessionStorage.getItem(`umigame-play:${puzzleId}`);
+    const raw = localStorage.getItem(`umigame-play:${puzzleId}`);
     if (!raw) return false;
     const saved = JSON.parse(raw);
     return Array.isArray(saved.messages) && saved.messages.length > 1 && !saved.result;
@@ -27,7 +27,7 @@ export default function ProgressBadge({ puzzleId }: { puzzleId: string }) {
     () => null
   );
   const playing = useSyncExternalStore(
-    // sessionStorageは同一タブの外から変わらないので購読は空でよい
+    // 表示中に他タブでの更新まで追う必要はないため購読は空でよい(表示のたびに読み直す)
     () => () => {},
     () => readPlaying(puzzleId),
     () => false

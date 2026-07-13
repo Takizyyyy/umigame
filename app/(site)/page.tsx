@@ -6,6 +6,7 @@ import DifficultyBadge from "@/components/DifficultyBadge";
 import RandomPickButton from "./RandomPickButton";
 import ClearCount from "@/components/ClearCount";
 import DailyPick from "@/components/DailyPick";
+import ContinueCard from "@/components/ContinueCard";
 import Reveal from "@/components/Reveal";
 import AnimatedLogo from "@/components/AnimatedLogo";
 import GenreIcon from "@/components/GenreIcon";
@@ -46,6 +47,10 @@ export default function Home() {
 
         <Reveal delay={0.15} className="mt-12">
           <DailyPick puzzles={puzzles} />
+        </Reveal>
+
+        <Reveal delay={0.2} className="mt-4 empty:hidden">
+          <ContinueCard />
         </Reveal>
       </section>
 

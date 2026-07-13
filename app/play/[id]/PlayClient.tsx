@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { JudgeResponse, PuzzleMeta } from "@/lib/types";
 import { readProgress, saveProgress } from "@/lib/progress";
@@ -76,8 +76,22 @@ export default function PlayClient({
   const [resultOpen, setResultOpen] = useState(false);
   // 問題文の開閉(スマホの縦空間を節約するため、ゲームが進んだら自動でたたむ)
   const [questionOpen, setQuestionOpen] = useState(true);
-  // フッター(入力欄一式)を表示中か。見返しスクロール中は隠して縦空間を返す
+  // フッター(入力欄一式)を表示中か。見返しスクロール中は隠す(オーバーレイなのでmainの高さは変わらない)
   const [footerShown, setFooterShown] = useState(true);
+  // フッターの実際の高さ。mainのpadding-bottomに反映し、隠れているフッターの下に
+  // チャットの最後のメッセージが潜り込まないようにする(textareaが伸びると高さも変わる)
+  const footerRef = useRef<HTMLElement>(null);
+  const [footerHeight, setFooterHeight] = useState(0);
+  useLayoutEffect(() => {
+    const el = footerRef.current;
+    if (!el) return;
+    setFooterHeight(el.offsetHeight);
+    const observer = new ResizeObserver((entries) => {
+      setFooterHeight(entries[0].contentRect.height);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const reduce = useReducedMotion();
 
@@ -88,11 +102,12 @@ export default function PlayClient({
   }, [messages, sending]);
 
   // チャット欄のスクロールを監視し、フッターの表示/非表示を「向き」で判定する。
-  // 「下端からの距離」だけで判定すると、フッターが隠れる→main(flex-1)が伸びる→
-  // 距離が変わる→また判定が揺れる、という自己ループでガタつくため、
-  // 下端付近か・上にスクロールしたか・下にスクロールしたか、で状態を切り替える
+  // フッターはオーバーレイ(position: absolute)なので、隠れてもmainの高さは変わらない
+  // →判定の自己ループは起きないが、指先の小さな揺れで表示/非表示が反転しないよう、
+  // 「上方向スクロールの累積量」でヒステリシス(しきい値に幅を持たせること)を効かせる
   const mainRef = useRef<HTMLElement>(null);
   const lastScrollTopRef = useRef(0);
+  const upAccumRef = useRef(0);
   useEffect(() => {
     const el = mainRef.current;
     if (!el) return;
@@ -105,9 +120,17 @@ export default function PlayClient({
       // 入力中(textareaにフォーカスがある)ときは、隠す方向の判定だけ無視する
       const typing = document.activeElement === inputRef.current;
 
-      if (distance < 60 || delta > 4) {
+      // 上スクロール(delta<0)は累積し、下スクロールしたら即リセットする
+      if (delta < 0) {
+        upAccumRef.current += -delta;
+      } else if (delta > 0) {
+        upAccumRef.current = 0;
+      }
+
+      if (delta > 8 || distance < 60) {
+        upAccumRef.current = 0;
         setFooterShown((prev) => (prev ? prev : true));
-      } else if (delta < -4 && !typing) {
+      } else if (!typing && upAccumRef.current > 48 && distance > 200) {
         setFooterShown((prev) => (prev ? false : prev));
       }
     };
@@ -125,12 +148,12 @@ export default function PlayClient({
     );
   }, [questionCount, result]);
 
-  // 進行中のログをsessionStorage(タブを閉じるまで残る)へ自動保存・復元する。
-  // 「あそびかた」ページ等へ移動して戻ってきても、続きから遊べるようにするため
+  // 進行中のログをlocalStorage(タブやブラウザを閉じても残る)へ自動保存・復元する。
+  // 「あそびかた」ページ等へ移動して戻ってきても、後日この端末で開き直しても続きから遊べるようにするため
   const storageKey = `umigame-play:${meta.id}`;
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem(storageKey);
+      const raw = localStorage.getItem(storageKey);
       if (!raw) return;
       const saved = JSON.parse(raw);
       // 挨拶1件だけの初期状態は復元しない(意味がないため)
@@ -154,14 +177,22 @@ export default function PlayClient({
 
   useEffect(() => {
     try {
-      sessionStorage.setItem(
+      localStorage.setItem(
         storageKey,
-        JSON.stringify({ messages, questionCount, hintsUsed, mode, result }),
+        JSON.stringify({
+          messages,
+          questionCount,
+          hintsUsed,
+          mode,
+          result,
+          title: meta.title,
+          updatedAt: Date.now(),
+        }),
       );
     } catch {
       // 保存できない環境(プライベートモード等)では諦めて通常動作
     }
-  }, [storageKey, messages, questionCount, hintsUsed, mode, result]);
+  }, [storageKey, messages, questionCount, hintsUsed, mode, result, meta.title]);
 
   // シェアURLで開かれたら、URLから質問ログを復元して閲覧モーダルを出す
   useEffect(() => {
@@ -397,7 +428,7 @@ export default function PlayClient({
   return (
     // h-dvh: 画面の高さに固定し、スクロールはチャット欄(main)の中だけで起こす。
     // これで質問を見返しても入力欄が画面外に流れない
-    <div className="flex h-dvh flex-col">
+    <div className="relative flex h-dvh flex-col">
       {/* 上部固定: 問題文 */}
       <header className="border-b border-stone-200 bg-[#fafaf8] px-5 py-4">
         <div className="mx-auto max-w-3xl">
@@ -446,7 +477,8 @@ export default function PlayClient({
           ブラウザのプルリフレッシュ(ページ再読み込み)を誤爆させない */}
       <main
         ref={mainRef}
-        className="mx-auto min-h-0 w-full max-w-3xl flex-1 space-y-3 overflow-y-auto overscroll-y-contain px-5 py-5"
+        style={{ paddingBottom: footerHeight + 8 }}
+        className="mx-auto min-h-0 w-full max-w-3xl flex-1 space-y-3 overflow-y-auto overscroll-y-contain px-5 pt-5"
       >
 
         {messages.map((m, i) => (
@@ -501,14 +533,20 @@ export default function PlayClient({
       </main>
 
       {/* 下部固定: 入力欄一式。
-          見返しスクロール中(上方向)は丸ごと非表示にして縦空間を返す。高さはアニメーションせず、
-          条件付きレンダリングで一瞬で空間を返すことで、スクロール中の再レイアウトを避ける */}
-      {footerShown && (
-        <footer
-          className={`border-t border-stone-200 bg-[#fafaf8] px-5 py-4 ${
-            reduce ? "" : "animate-[footer-in_180ms_ease-out]"
-          }`}
-        >
+          アンマウントはせず、常時レンダリングしたままtransformでスライドして隠す(オーバーレイ)。
+          高さやdisplayを変えないので、main側のレイアウトは一切動かない=ガタつきが起きない */}
+      <footer
+        ref={footerRef}
+        style={{
+          transform: footerShown ? "translateY(0)" : "translateY(110%)",
+          transition: reduce
+            ? "none"
+            : "transform 260ms cubic-bezier(0.32, 0.72, 0, 1)",
+        }}
+        className={`absolute inset-x-0 bottom-0 z-10 border-t border-stone-200 bg-[#fafaf8] px-5 py-4 ${
+          footerShown ? "" : "pointer-events-none"
+        }`}
+      >
         {result && !resultOpen ? (
           // 真相を確認済み・ログを見返し中: 入力欄は不要なので細いバー1本にする
           <div className="mx-auto flex max-w-3xl gap-2">
@@ -616,8 +654,7 @@ export default function PlayClient({
             </div>
           </div>
         )}
-        </footer>
-      )}
+      </footer>
 
       {/* シェアURLで開かれたときの質問ログ閲覧モーダル */}
       <AnimatePresence>
