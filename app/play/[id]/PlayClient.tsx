@@ -76,8 +76,8 @@ export default function PlayClient({
   const [resultOpen, setResultOpen] = useState(false);
   // 問題文の開閉(スマホの縦空間を節約するため、ゲームが進んだら自動でたたむ)
   const [questionOpen, setQuestionOpen] = useState(true);
-  // チャット欄が下端付近にあるか(見返しスクロール中はフッターを圧縮する)
-  const [nearBottom, setNearBottom] = useState(true);
+  // フッター(入力欄一式)を表示中か。見返しスクロール中は隠して縦空間を返す
+  const [footerShown, setFooterShown] = useState(true);
 
   const reduce = useReducedMotion();
 
@@ -87,16 +87,30 @@ export default function PlayClient({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
 
-  // チャット欄のスクロール位置を監視し、下端付近かどうかを判定する
+  // チャット欄のスクロールを監視し、フッターの表示/非表示を「向き」で判定する。
+  // 「下端からの距離」だけで判定すると、フッターが隠れる→main(flex-1)が伸びる→
+  // 距離が変わる→また判定が揺れる、という自己ループでガタつくため、
+  // 下端付近か・上にスクロールしたか・下にスクロールしたか、で状態を切り替える
   const mainRef = useRef<HTMLElement>(null);
+  const lastScrollTopRef = useRef(0);
   useEffect(() => {
     const el = mainRef.current;
     if (!el) return;
+    lastScrollTopRef.current = el.scrollTop;
     const handleScroll = () => {
-      const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
-      setNearBottom(distance < 120);
+      const scrollTop = el.scrollTop;
+      const delta = scrollTop - lastScrollTopRef.current;
+      lastScrollTopRef.current = scrollTop;
+      const distance = el.scrollHeight - scrollTop - el.clientHeight;
+      // 入力中(textareaにフォーカスがある)ときは、隠す方向の判定だけ無視する
+      const typing = document.activeElement === inputRef.current;
+
+      if (distance < 60 || delta > 4) {
+        setFooterShown((prev) => (prev ? prev : true));
+      } else if (delta < -4 && !typing) {
+        setFooterShown((prev) => (prev ? false : prev));
+      }
     };
-    handleScroll();
     el.addEventListener("scroll", handleScroll, { passive: true });
     return () => el.removeEventListener("scroll", handleScroll);
   }, []);
@@ -486,8 +500,15 @@ export default function PlayClient({
         <div ref={bottomRef} />
       </main>
 
-      {/* 下部固定: 入力欄 */}
-      <footer className="border-t border-stone-200 bg-[#fafaf8] px-5 py-4">
+      {/* 下部固定: 入力欄一式。
+          見返しスクロール中(上方向)は丸ごと非表示にして縦空間を返す。高さはアニメーションせず、
+          条件付きレンダリングで一瞬で空間を返すことで、スクロール中の再レイアウトを避ける */}
+      {footerShown && (
+        <footer
+          className={`border-t border-stone-200 bg-[#fafaf8] px-5 py-4 ${
+            reduce ? "" : "animate-[footer-in_180ms_ease-out]"
+          }`}
+        >
         {result && !resultOpen ? (
           // 真相を確認済み・ログを見返し中: 入力欄は不要なので細いバー1本にする
           <div className="mx-auto flex max-w-3xl gap-2">
@@ -506,13 +527,8 @@ export default function PlayClient({
           </div>
         ) : (
           <div className="mx-auto max-w-3xl">
-            {/* モード切り替え(選択中の面がスライドするピル)。
-                見返しスクロール中(下端から離れた)は非表示にして縦空間を空ける */}
-            <div
-              className={`overflow-hidden transition-[max-height,opacity] duration-200 ease-out ${
-                nearBottom ? "mb-3 max-h-16 opacity-100" : "mb-0 max-h-0 opacity-0"
-              }`}
-            >
+            {/* モード切り替え(選択中の面がスライドするピル) */}
+            <div className="mb-3">
               <div className="flex w-fit rounded-full border border-stone-200 bg-white p-1">
                 {(["question", "answer"] as const).map((m) => (
                   <button
@@ -577,12 +593,8 @@ export default function PlayClient({
               </button>
             </div>
 
-            {/* ヒント・ギブアップ行。見返しスクロール中は非表示 */}
-            <div
-              className={`overflow-hidden transition-[max-height,opacity] duration-200 ease-out ${
-                nearBottom ? "mt-3 max-h-10 opacity-100" : "mt-0 max-h-0 opacity-0"
-              }`}
-            >
+            {/* ヒント・ギブアップ行 */}
+            <div className="mt-3">
               <div className="flex items-center justify-between text-xs">
                 <button
                   onClick={handleHint}
@@ -604,7 +616,8 @@ export default function PlayClient({
             </div>
           </div>
         )}
-      </footer>
+        </footer>
+      )}
 
       {/* シェアURLで開かれたときの質問ログ閲覧モーダル */}
       <AnimatePresence>
