@@ -43,6 +43,15 @@ body {
   }
 }
 
+/* 入力欄などのスクロールバーを見た目上だけ消す(長文時にスクロールする機能自体は残す) */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* 旧Edge/IE */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/新Edge */
+}
+
 /* 動きを減らす設定のユーザーにはアニメーションを止める */
 @media (prefers-reduced-motion: reduce) {
   *,

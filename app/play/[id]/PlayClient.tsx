@@ -620,7 +620,7 @@ export default function PlayClient({
                   // スマホの16px表示でも1行に収まる長さにする(長いと途中で切れて見にくい)
                   mode === "question" ? "はい/いいえで聞ける質問" : "推理した真相を書く"
                 }
-                className="max-h-32 min-w-0 flex-1 resize-none overflow-y-auto rounded-3xl border border-stone-200 bg-white px-5 py-2.5 text-base leading-6 outline-none transition placeholder:text-stone-400 focus:border-stone-400 disabled:opacity-50 sm:text-sm"
+                className="no-scrollbar max-h-32 min-w-0 flex-1 resize-none overflow-y-auto rounded-3xl border border-stone-200 bg-white px-5 py-2.5 text-base leading-6 outline-none transition placeholder:text-stone-400 focus:border-stone-400 disabled:opacity-50 sm:text-sm"
               />
               <button
                 onClick={handleSend}
