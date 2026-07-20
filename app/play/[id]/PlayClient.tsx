@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import type { JudgeResponse, PuzzleMeta } from "@/lib/types";
+import type { JudgeResponse, PuzzleMeta, Verdict } from "@/lib/types";
 import { readProgress, saveProgress } from "@/lib/progress";
 import { decodeLog, encodeLog } from "@/lib/sharelog";
 import DifficultyBadge from "@/components/DifficultyBadge";
@@ -12,6 +12,10 @@ import DifficultyBadge from "@/components/DifficultyBadge";
 type ChatMessage = {
   role: "player" | "ai" | "hint";
   text: string;
+  // 質問モードのAI応答のとき、その判定(はい/いいえ等)と対応する質問文を記録する。
+  // 「わかったこと」一覧を組み立てるために使う。
+  verdict?: Verdict;
+  question?: string;
 };
 
 // 判定結果(質問モード)を出題者のセリフに変換する
@@ -74,6 +78,8 @@ export default function PlayClient({
   } | null>(null);
   // 結果モーダルの表示/非表示(閉じて質問ログを見返し、また開ける)
   const [resultOpen, setResultOpen] = useState(false);
+  // 「わかったこと」一覧シートの開閉
+  const [boardOpen, setBoardOpen] = useState(false);
   // 問題文の開閉(スマホの縦空間を節約するため、ゲームが進んだら自動でたたむ)
   const [questionOpen, setQuestionOpen] = useState(true);
   // フッター(入力欄一式)を表示中か。見返しスクロール中は隠す(オーバーレイなのでmainの高さは変わらない)
@@ -328,6 +334,9 @@ export default function PlayClient({
       {
         role: "ai",
         text: data.comment ? `${verdictText} ${data.comment}` : verdictText,
+        // 「わかったこと」一覧用に、判定と質問文もあわせて記録する
+        verdict: data.verdict as Verdict,
+        question: text,
       },
     ]);
   }
@@ -424,6 +433,12 @@ export default function PlayClient({
       }
     }
   }
+
+  // 「わかったこと」一覧の中身。はい/いいえと判定された質問、使ったヒントを集める
+  const knownYes = messages.filter((m) => m.verdict === "yes" && m.question);
+  const knownNo = messages.filter((m) => m.verdict === "no" && m.question);
+  const knownHints = messages.filter((m) => m.role === "hint");
+  const knownTotal = knownYes.length + knownNo.length + knownHints.length;
 
   return (
     // h-dvh: 画面の高さに固定し、スクロールはチャット欄(main)の中だけで起こす。
@@ -565,8 +580,8 @@ export default function PlayClient({
           </div>
         ) : (
           <div className="mx-auto max-w-3xl">
-            {/* モード切り替え(選択中の面がスライドするピル) */}
-            <div className="mb-3">
+            {/* モード切り替え(選択中の面がスライドするピル)+「わかったこと」ボタン */}
+            <div className="mb-3 flex items-center justify-between gap-2">
               <div className="flex w-fit rounded-full border border-stone-200 bg-white p-1">
                 {(["question", "answer"] as const).map((m) => (
                   <button
@@ -591,6 +606,19 @@ export default function PlayClient({
                   </button>
                 ))}
               </div>
+              {/* これまでに判明した手がかりを一覧で振り返る */}
+              <button
+                type="button"
+                onClick={() => setBoardOpen(true)}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-stone-200 bg-white px-4 py-1.5 text-sm font-medium text-stone-600 transition hover:border-stone-400"
+              >
+                わかったこと
+                {knownTotal > 0 && (
+                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-amber-600 px-1.5 text-xs font-bold text-white">
+                    {knownTotal}
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* 文字数カウンター(200字上限を最初から見せておく) */}
@@ -655,6 +683,103 @@ export default function PlayClient({
           </div>
         )}
       </footer>
+
+      {/* 「わかったこと」一覧シート(はい/いいえ/使ったヒントを整理して振り返る) */}
+      <AnimatePresence>
+        {boardOpen && (
+          <motion.div
+            initial={reduce ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setBoardOpen(false)}
+            className="fixed inset-0 z-20 flex items-end justify-center bg-stone-950/40 p-4 backdrop-blur-sm sm:items-center"
+          >
+            <motion.div
+              initial={reduce ? false : { opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={reduce ? undefined : { opacity: 0, y: 24, scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-stone-200 bg-[#fafaf8] p-6 shadow-xl shadow-stone-900/10"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-base font-bold tracking-tight">
+                  これまでにわかったこと
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setBoardOpen(false)}
+                  className="rounded-full border border-stone-200 bg-white px-3 py-1 text-sm text-stone-600 transition hover:border-stone-400"
+                >
+                  ✕ 閉じる
+                </button>
+              </div>
+
+              {knownTotal === 0 ? (
+                <p className="py-8 text-center text-sm leading-7 text-stone-400">
+                  まだ手がかりはありません。
+                  <br />
+                  質問して「はい / いいえ」を集めてみよう。
+                </p>
+              ) : (
+                <div className="space-y-5">
+                  {knownYes.length > 0 && (
+                    <section>
+                      <h3 className="mb-2 text-sm font-bold text-emerald-700">
+                        ◯ はい({knownYes.length})
+                      </h3>
+                      <ul className="space-y-1.5">
+                        {knownYes.map((m, i) => (
+                          <li
+                            key={i}
+                            className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm leading-6 text-stone-700"
+                          >
+                            {m.question}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                  {knownNo.length > 0 && (
+                    <section>
+                      <h3 className="mb-2 text-sm font-bold text-rose-700">
+                        ✕ いいえ({knownNo.length})
+                      </h3>
+                      <ul className="space-y-1.5">
+                        {knownNo.map((m, i) => (
+                          <li
+                            key={i}
+                            className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm leading-6 text-stone-700"
+                          >
+                            {m.question}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                  {knownHints.length > 0 && (
+                    <section>
+                      <h3 className="mb-2 text-sm font-bold text-amber-700">
+                        💡 見たヒント({knownHints.length})
+                      </h3>
+                      <ul className="space-y-1.5">
+                        {knownHints.map((m, i) => (
+                          <li
+                            key={i}
+                            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-stone-700"
+                          >
+                            {m.text}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* シェアURLで開かれたときの質問ログ閲覧モーダル */}
       <AnimatePresence>
