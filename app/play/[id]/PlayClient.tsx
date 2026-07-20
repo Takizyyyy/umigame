@@ -92,8 +92,10 @@ export default function PlayClient({
     const el = footerRef.current;
     if (!el) return;
     setFooterHeight(el.offsetHeight);
-    const observer = new ResizeObserver((entries) => {
-      setFooterHeight(entries[0].contentRect.height);
+    // contentRect.height は padding/border を含まず、フッターの py-4・border-t の分だけ
+    // 値が小さくなって最後のメッセージが隠れる。全体高さの offsetHeight で測り直す
+    const observer = new ResizeObserver(() => {
+      setFooterHeight(el.offsetHeight);
     });
     observer.observe(el);
     return () => observer.disconnect();
