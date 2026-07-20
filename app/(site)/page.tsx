@@ -28,8 +28,10 @@ export default function Home() {
             思わず話したくなる
             <span className="inline-block">実話。</span>
           </h1>
-          <p className="mt-5 max-w-[38ch] text-base leading-8 text-stone-500">
-            AIの出題者に「はい/いいえ」で質問して、不思議な状況の真相を推理する水平思考クイズ。全{puzzles.length}問、すべて出典つきのうんちくです。
+          <p className="mt-5 max-w-[38ch] text-pretty text-base leading-8 text-stone-500">
+            AIの出題者に「はい / いいえ」で質問して、不思議な状況の真相を推理する水平思考クイズ。
+            <br />
+            全{puzzles.length}問、すべて出典つきのうんちくです。
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-5">
             <RandomPickButton ids={puzzles.map((p) => p.id)} />
