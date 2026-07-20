@@ -103,6 +103,34 @@ export default function PlayClient({
 
   const reduce = useReducedMotion();
 
+  // オーバーレイ(わかったこと/結果/シェアログ)表示中は、Escで閉じ、背後のチャットのスクロールを止める
+  const mainScrollRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const anyOpen = boardOpen || !!sharedLog || (!!result && resultOpen);
+    if (!anyOpen) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      // 最前面のものから閉じる
+      if (boardOpen) setBoardOpen(false);
+      else if (sharedLog) {
+        setSharedLog(null);
+        history.replaceState(null, "", window.location.pathname);
+      } else if (result && resultOpen) setResultOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+
+    // 背後のチャット欄がスクロールしないよう一時的に固定する
+    const el = mainScrollRef.current;
+    const prev = el?.style.overflow ?? "";
+    if (el) el.style.overflow = "hidden";
+
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      if (el) el.style.overflow = prev;
+    };
+  }, [boardOpen, sharedLog, result, resultOpen]);
+
   // 新しいメッセージが増えたらチャット欄を最下部までスクロール
   const bottomRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -116,6 +144,34 @@ export default function PlayClient({
   const mainRef = useRef<HTMLElement>(null);
   const lastScrollTopRef = useRef(0);
   const upAccumRef = useRef(0);
+
+  // オーバーレイ(わかったこと/結果/シェアログ)表示中は、Escで閉じ、背後のチャットのスクロールを止める
+  useEffect(() => {
+    const anyOpen = boardOpen || !!sharedLog || (!!result && resultOpen);
+    if (!anyOpen) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      // 最前面のものから閉じる
+      if (boardOpen) setBoardOpen(false);
+      else if (sharedLog) {
+        setSharedLog(null);
+        history.replaceState(null, "", window.location.pathname);
+      } else if (result && resultOpen) setResultOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+
+    // 背後のチャット欄がスクロールしないよう一時的に固定する
+    const el = mainRef.current;
+    const prev = el?.style.overflow ?? "";
+    if (el) el.style.overflow = "hidden";
+
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      if (el) el.style.overflow = prev;
+    };
+  }, [boardOpen, sharedLog, result, resultOpen]);
+
   useEffect(() => {
     const el = mainRef.current;
     if (!el) return;
@@ -565,20 +621,36 @@ export default function PlayClient({
         }`}
       >
         {result && !resultOpen ? (
-          // 真相を確認済み・ログを見返し中: 入力欄は不要なので細いバー1本にする
-          <div className="mx-auto flex max-w-3xl gap-2">
-            <button
-              onClick={() => setResultOpen(true)}
-              className="flex-1 rounded-full bg-amber-600 py-2.5 text-sm font-bold text-white transition hover:bg-amber-700"
-            >
-              真相をもう一度見る
-            </button>
-            <button
-              onClick={handleNextPuzzle}
-              className="flex-1 rounded-full bg-stone-900 py-2.5 text-sm font-bold text-white transition-colors hover:bg-stone-700"
-            >
-              つぎの問題へ
-            </button>
+          // 真相を確認済み・ログを見返し中: 入力欄は不要。手がかりの振り返りと次アクションだけ出す
+          <div className="mx-auto max-w-3xl">
+            <div className="mb-2 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setBoardOpen(true)}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-500 transition hover:text-stone-900"
+              >
+                わかったことを振り返る
+                {knownTotal > 0 && (
+                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-amber-600 px-1.5 text-xs font-bold text-white">
+                    {knownTotal}
+                  </span>
+                )}
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setResultOpen(true)}
+                className="flex-1 rounded-full bg-amber-600 py-2.5 text-sm font-bold text-white transition hover:bg-amber-700"
+              >
+                真相をもう一度見る
+              </button>
+              <button
+                onClick={handleNextPuzzle}
+                className="flex-1 rounded-full bg-stone-900 py-2.5 text-sm font-bold text-white transition-colors hover:bg-stone-700"
+              >
+                つぎの問題へ
+              </button>
+            </div>
           </div>
         ) : (
           <div className="mx-auto max-w-3xl">
