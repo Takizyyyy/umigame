@@ -103,34 +103,20 @@ export default function PlayClient({
 
   const reduce = useReducedMotion();
 
-  // このページはh-dvhで画面ぴったりに固定し、スクロールはmainの中だけで起こす設計。
-  // ただしbody側のoverflowは初期状態のままだと、dvhとvhのわずかなズレ(モバイルの
-  // ブラウザUIの出没など)でページ自体にもスクロールバーが出てしまい、mainの
-  // スクロールバーと2本並ぶ見た目になる。このページの表示中だけbodyのスクロールを止める
-  useEffect(() => {
-    const { style } = document.body;
-    const prev = style.overflow;
-    style.overflow = "hidden";
-    return () => {
-      style.overflow = prev;
-    };
-  }, []);
-
-  // 新しいメッセージが増えたらチャット欄を最下部までスクロール
+  // 新しいメッセージが増えたらページ最下部までスクロール
   const bottomRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
 
-  // チャット欄のスクロールを監視し、フッターの表示/非表示を「向き」で判定する。
-  // フッターはオーバーレイ(position: absolute)なので、隠れてもmainの高さは変わらない
+  // ページ全体のスクロールを監視し、フッターの表示/非表示を「向き」で判定する。
+  // フッターはオーバーレイ(position: fixed)なのでページの高さは変わらない
   // →判定の自己ループは起きないが、指先の小さな揺れで表示/非表示が反転しないよう、
   // 「上方向スクロールの累積量」でヒステリシス(しきい値に幅を持たせること)を効かせる
-  const mainRef = useRef<HTMLElement>(null);
   const lastScrollTopRef = useRef(0);
   const upAccumRef = useRef(0);
 
-  // オーバーレイ(わかったこと/結果/シェアログ)表示中は、Escで閉じ、背後のチャットのスクロールを止める
+  // オーバーレイ(わかったこと/結果/シェアログ)表示中は、Escで閉じ、背後のページのスクロールを止める
   useEffect(() => {
     const anyOpen = boardOpen || !!sharedLog || (!!result && resultOpen);
     if (!anyOpen) return;
@@ -146,26 +132,25 @@ export default function PlayClient({
     };
     window.addEventListener("keydown", onKey);
 
-    // 背後のチャット欄がスクロールしないよう一時的に固定する
-    const el = mainRef.current;
-    const prev = el?.style.overflow ?? "";
-    if (el) el.style.overflow = "hidden";
+    // 背後のページがスクロールしないよう一時的に固定する
+    const { style } = document.body;
+    const prev = style.overflow;
+    style.overflow = "hidden";
 
     return () => {
       window.removeEventListener("keydown", onKey);
-      if (el) el.style.overflow = prev;
+      style.overflow = prev;
     };
   }, [boardOpen, sharedLog, result, resultOpen]);
 
   useEffect(() => {
-    const el = mainRef.current;
-    if (!el) return;
-    lastScrollTopRef.current = el.scrollTop;
+    lastScrollTopRef.current = window.scrollY;
     const handleScroll = () => {
-      const scrollTop = el.scrollTop;
+      const scrollTop = window.scrollY;
       const delta = scrollTop - lastScrollTopRef.current;
       lastScrollTopRef.current = scrollTop;
-      const distance = el.scrollHeight - scrollTop - el.clientHeight;
+      const distance =
+        document.documentElement.scrollHeight - scrollTop - window.innerHeight;
       // 入力中(textareaにフォーカスがある)ときは、隠す方向の判定だけ無視する
       const typing = document.activeElement === inputRef.current;
 
@@ -185,8 +170,8 @@ export default function PlayClient({
         setFooterShown((prev) => (prev ? false : prev));
       }
     };
-    el.addEventListener("scroll", handleScroll, { passive: true });
-    return () => el.removeEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // のこり質問が5回になったら一度だけ知らせる(30回の壁に突然ぶつからないように)
@@ -486,9 +471,10 @@ export default function PlayClient({
   const knownTotal = knownYes.length + knownNo.length + knownHints.length;
 
   return (
-    // h-dvh: 画面の高さに固定し、スクロールはチャット欄(main)の中だけで起こす。
-    // これで質問を見返しても入力欄が画面外に流れない
-    <div className="relative flex h-dvh flex-col">
+    // ページ全体を普通に(ブラウザ標準のスクロールで)流す。
+    // 以前はチャット欄(main)だけを内部スクロールさせていたが、PCでは
+    // マウスカーソルがチャット欄の上にないとスクロールが反応せず使いにくかったため撤回
+    <div className="flex min-h-dvh flex-col">
       {/* 上部固定: 問題文 */}
       <header className="border-b border-stone-200 bg-[#fafaf8] px-5 py-4">
         <div className="mx-auto max-w-3xl">
@@ -532,13 +518,11 @@ export default function PlayClient({
         </div>
       </header>
 
-      {/* 中央: チャットログ */}
-      {/* overscroll-y-contain: ログを一番上まで見返して更に引っ張っても、
-          ブラウザのプルリフレッシュ(ページ再読み込み)を誤爆させない */}
+      {/* 中央: チャットログ(ページの通常の流れの一部。固定フッターの下に
+          最後のメッセージが潜り込まないよう、フッターの実測高さ分だけ余白を確保) */}
       <main
-        ref={mainRef}
         style={{ paddingBottom: footerHeight + 8 }}
-        className="chat-scroll mx-auto min-h-0 w-full max-w-3xl flex-1 space-y-3 overflow-y-auto overscroll-y-contain px-5 pt-5"
+        className="mx-auto w-full max-w-3xl flex-1 space-y-3 px-5 pt-5"
       >
 
         {messages.map((m, i) => (
@@ -592,7 +576,7 @@ export default function PlayClient({
         <div ref={bottomRef} />
       </main>
 
-      {/* 下部固定: 入力欄一式。
+      {/* 画面下部に固定表示(position: fixed、ページのスクロールに追従しない)の入力欄一式。
           アンマウントはせず、常時レンダリングしたままtransformでスライドして隠す(オーバーレイ)。
           高さやdisplayを変えないので、main側のレイアウトは一切動かない=ガタつきが起きない。
           固定時間のtransitionではなくスプリング(critically damped=バウンドなし)にすることで、
@@ -602,7 +586,7 @@ export default function PlayClient({
         initial={false}
         animate={{ y: footerShown ? 0 : "110%" }}
         transition={reduce ? { duration: 0 } : { type: "spring", bounce: 0, duration: 0.35 }}
-        className={`absolute inset-x-0 bottom-0 z-10 border-t border-stone-200 bg-[#fafaf8] px-5 py-4 ${
+        className={`fixed inset-x-0 bottom-0 z-10 border-t border-stone-200 bg-[#fafaf8] px-5 py-4 ${
           footerShown ? "" : "pointer-events-none"
         }`}
       >
