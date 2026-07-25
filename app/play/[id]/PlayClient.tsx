@@ -103,6 +103,19 @@ export default function PlayClient({
 
   const reduce = useReducedMotion();
 
+  // このページはh-dvhで画面ぴったりに固定し、スクロールはmainの中だけで起こす設計。
+  // ただしbody側のoverflowは初期状態のままだと、dvhとvhのわずかなズレ(モバイルの
+  // ブラウザUIの出没など)でページ自体にもスクロールバーが出てしまい、mainの
+  // スクロールバーと2本並ぶ見た目になる。このページの表示中だけbodyのスクロールを止める
+  useEffect(() => {
+    const { style } = document.body;
+    const prev = style.overflow;
+    style.overflow = "hidden";
+    return () => {
+      style.overflow = prev;
+    };
+  }, []);
+
   // 新しいメッセージが増えたらチャット欄を最下部までスクロール
   const bottomRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -156,17 +169,19 @@ export default function PlayClient({
       // 入力中(textareaにフォーカスがある)ときは、隠す方向の判定だけ無視する
       const typing = document.activeElement === inputRef.current;
 
-      // 上スクロール(delta<0)は累積し、下スクロールしたら即リセットする
+      // 上スクロール(delta<0)は累積する。下スクロールは「引き算」で減衰させるだけにし、
+      // 即ゼロリセットしない。指先の小さな逆ブレ(数px)で毎回振り出しに戻ると、
+      // 実際に指を動かした量よりずっと多くスクロールしないと閉じない体感になるため
       if (delta < 0) {
         upAccumRef.current += -delta;
       } else if (delta > 0) {
-        upAccumRef.current = 0;
+        upAccumRef.current = Math.max(0, upAccumRef.current - delta);
       }
 
       if (delta > 8 || distance < 60) {
         upAccumRef.current = 0;
         setFooterShown((prev) => (prev ? prev : true));
-      } else if (!typing && upAccumRef.current > 48 && distance > 200) {
+      } else if (!typing && upAccumRef.current > 16 && distance > 60) {
         setFooterShown((prev) => (prev ? false : prev));
       }
     };
@@ -523,7 +538,7 @@ export default function PlayClient({
       <main
         ref={mainRef}
         style={{ paddingBottom: footerHeight + 8 }}
-        className="mx-auto min-h-0 w-full max-w-3xl flex-1 space-y-3 overflow-y-auto overscroll-y-contain px-5 pt-5"
+        className="chat-scroll mx-auto min-h-0 w-full max-w-3xl flex-1 space-y-3 overflow-y-auto overscroll-y-contain px-5 pt-5"
       >
 
         {messages.map((m, i) => (
@@ -579,15 +594,14 @@ export default function PlayClient({
 
       {/* 下部固定: 入力欄一式。
           アンマウントはせず、常時レンダリングしたままtransformでスライドして隠す(オーバーレイ)。
-          高さやdisplayを変えないので、main側のレイアウトは一切動かない=ガタつきが起きない */}
-      <footer
+          高さやdisplayを変えないので、main側のレイアウトは一切動かない=ガタつきが起きない。
+          固定時間のtransitionではなくスプリング(critically damped=バウンドなし)にすることで、
+          表示/非表示が短い間隔で切り替わっても、動いている途中の値からなめらかに向きを変える */}
+      <motion.footer
         ref={footerRef}
-        style={{
-          transform: footerShown ? "translateY(0)" : "translateY(110%)",
-          transition: reduce
-            ? "none"
-            : "transform 260ms cubic-bezier(0.32, 0.72, 0, 1)",
-        }}
+        initial={false}
+        animate={{ y: footerShown ? 0 : "110%" }}
+        transition={reduce ? { duration: 0 } : { type: "spring", bounce: 0, duration: 0.35 }}
         className={`absolute inset-x-0 bottom-0 z-10 border-t border-stone-200 bg-[#fafaf8] px-5 py-4 ${
           footerShown ? "" : "pointer-events-none"
         }`}
@@ -728,7 +742,7 @@ export default function PlayClient({
             </div>
           </div>
         )}
-      </footer>
+      </motion.footer>
 
       {/* 「わかったこと」一覧シート(はい/いいえ/使ったヒントを整理して振り返る) */}
       <AnimatePresence>

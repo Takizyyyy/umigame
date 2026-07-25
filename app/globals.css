@@ -52,6 +52,23 @@ body {
   display: none; /* Chrome/Safari/新Edge */
 }
 
+/* チャット欄など、長く見返す領域のスクロールバーを細く・控えめにする
+   (完全に消すとどこまで見返せるか分からなくなるので、存在は残す) */
+.chat-scroll {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #d6d3d1 transparent; /* stone-300 */
+}
+.chat-scroll::-webkit-scrollbar {
+  width: 6px; /* Chrome/Safari/新Edge */
+}
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-scroll::-webkit-scrollbar-thumb {
+  background-color: #d6d3d1; /* stone-300 */
+  border-radius: 999px;
+}
+
 /* 動きを減らす設定のユーザーにはアニメーションを止める */
 @media (prefers-reduced-motion: reduce) {
   *,
