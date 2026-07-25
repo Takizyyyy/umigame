@@ -12,6 +12,15 @@ const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 60_000;
 const requestLog = new Map<string, number[]>();
 
+// commentの長さ・「真相を書かない」はプロンプト指示だけで守らせている(lib/ai.ts)。
+// プロンプトインジェクションで指示が破られた場合の保険として、correct以外は
+// サーバー側でも強制的に短く切り詰め、真相の全文がcommentに漏れないようにする
+const MAX_COMMENT_LENGTH = 40;
+function safeComment(comment: string | undefined, isCorrect: boolean): string | undefined {
+  if (!comment || isCorrect || comment.length <= MAX_COMMENT_LENGTH) return comment;
+  return comment.slice(0, MAX_COMMENT_LENGTH) + "…";
+}
+
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
   const timestamps = (requestLog.get(ip) ?? []).filter(
@@ -23,13 +32,29 @@ function isRateLimited(ip: string): boolean {
   return false;
 }
 
+// ブラウザからの同一オリジンfetchは自動でOriginヘッダーを付けるため、
+// これが無い/自サイトと違うリクエストは弾く。ヘッダーは詐称できるので
+// 本気の攻撃者は防げないが、雑なスクリプト・外部からの直叩きボットは止まる
+function isSameOrigin(request: Request): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return false;
+  try {
+    return new URL(origin).host === request.headers.get("host");
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
+  if (!isSameOrigin(request)) {
+    return Response.json({ error: "forbidden" }, { status: 403 });
+  }
+
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
   if (isRateLimited(ip)) {
-    const res: JudgeResponse = {
-      verdict: "unclear",
-      comment: "少し急ぎすぎ! ひと呼吸おいてから質問してね",
-    };
+    // busyとして返す(verdictとして返すとクライアントが通常の判定と誤解し、
+    // 解答モードでは「不正解」表示・質問回数の消費が起きてしまう)
+    const res: JudgeResponse = { busy: true };
     return Response.json(res);
   }
 
@@ -47,6 +72,9 @@ export async function POST(request: Request) {
   if (!puzzle) {
     return Response.json({ error: "puzzle not found" }, { status: 400 });
   }
+  // この上限はクライアント申告のquestionCountを信じているだけで、直接APIを
+  // 叩けば回避できる(不正な値の形式チェックのみ)。真相はどのみち"giveup"で
+  // いつでも取得できる設計なので、これはチート対策ではなくUIの誤動作防止の割り切り
   if (
     typeof body.questionCount !== "number" ||
     body.questionCount < 0 ||
@@ -103,7 +131,7 @@ export async function POST(request: Request) {
 
       const res: JudgeResponse = {
         verdict,
-        comment,
+        comment: safeComment(comment, verdict === "correct"),
         ...(verdict === "correct" && {
           reveal: {
             truth: puzzle.truth,
@@ -126,7 +154,7 @@ export async function POST(request: Request) {
 
     const res: JudgeResponse = {
       verdict,
-      comment,
+      comment: safeComment(comment, verdict === "correct"),
       // 正解のときだけ真相を開示する
       ...(verdict === "correct" && {
         reveal: {

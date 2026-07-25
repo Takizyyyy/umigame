@@ -103,34 +103,6 @@ export default function PlayClient({
 
   const reduce = useReducedMotion();
 
-  // オーバーレイ(わかったこと/結果/シェアログ)表示中は、Escで閉じ、背後のチャットのスクロールを止める
-  const mainScrollRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const anyOpen = boardOpen || !!sharedLog || (!!result && resultOpen);
-    if (!anyOpen) return;
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      // 最前面のものから閉じる
-      if (boardOpen) setBoardOpen(false);
-      else if (sharedLog) {
-        setSharedLog(null);
-        history.replaceState(null, "", window.location.pathname);
-      } else if (result && resultOpen) setResultOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-
-    // 背後のチャット欄がスクロールしないよう一時的に固定する
-    const el = mainScrollRef.current;
-    const prev = el?.style.overflow ?? "";
-    if (el) el.style.overflow = "hidden";
-
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      if (el) el.style.overflow = prev;
-    };
-  }, [boardOpen, sharedLog, result, resultOpen]);
-
   // 新しいメッセージが増えたらチャット欄を最下部までスクロール
   const bottomRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
