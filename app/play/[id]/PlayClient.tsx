@@ -475,8 +475,10 @@ export default function PlayClient({
     // 以前はチャット欄(main)だけを内部スクロールさせていたが、PCでは
     // マウスカーソルがチャット欄の上にないとスクロールが反応せず使いにくかったため撤回
     <div className="flex min-h-dvh flex-col">
-      {/* 上部固定: 問題文 */}
-      <header className="border-b border-stone-200 bg-[#fafaf8] px-5 py-4">
+      {/* 画面上部に貼り付く見出し(sticky)。問題文・残り質問数は常に見えていてほしいが、
+          position: fixedにするとページの流れから外れて下のチャットが潜り込むので、
+          流れに残したまま上端で止まるstickyを使う(ページ全体のスクロールも妨げない) */}
+      <header className="sticky top-0 z-10 border-b border-stone-200 bg-[#fafaf8] px-5 py-4">
         <div className="mx-auto max-w-3xl">
           <div className="flex items-center justify-between gap-2">
             <Link
@@ -626,27 +628,32 @@ export default function PlayClient({
           <div className="mx-auto max-w-3xl">
             {/* モード切り替え(選択中の面がスライドするピル)+「わかったこと」ボタン */}
             <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="flex w-fit rounded-full border border-stone-200 bg-white p-1">
+              <div className="relative flex w-fit rounded-full border border-stone-200 bg-white p-1">
+                {/* 選択中を示す黒い丸。以前はlayoutIdで「選ばれたボタンの位置へ動く」
+                    書き方をしていたが、それだと問題文の開閉など無関係な再レイアウトのたびに
+                    位置を測り直して勝手に動いてしまった。modeの値だけで移動量を決める書き方に変更 */}
+                <motion.span
+                  aria-hidden
+                  className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-stone-900"
+                  initial={false}
+                  animate={{ x: mode === "question" ? "0%" : "100%" }}
+                  transition={
+                    reduce
+                      ? { duration: 0 }
+                      : { type: "spring", stiffness: 500, damping: 35 }
+                  }
+                />
                 {(["question", "answer"] as const).map((m) => (
                   <button
                     key={m}
                     onClick={() => setMode(m)}
                     disabled={sending || !!result}
                     aria-pressed={mode === m}
-                    className={`relative rounded-full px-5 py-1.5 text-sm font-medium transition-colors ${
+                    className={`relative z-10 rounded-full px-5 py-1.5 text-sm font-medium transition-colors ${
                       mode === m ? "text-white" : "text-stone-500 hover:text-stone-900"
                     }`}
                   >
-                    {mode === m && (
-                      <motion.span
-                        layoutId="mode-pill"
-                        className="absolute inset-0 rounded-full bg-stone-900"
-                        transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                      />
-                    )}
-                    <span className="relative">
-                      {m === "question" ? "質問" : "解答"}
-                    </span>
+                    {m === "question" ? "質問" : "解答"}
                   </button>
                 ))}
               </div>
