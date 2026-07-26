@@ -3,12 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { readProgress, subscribeToProgress } from "@/lib/progress";
 
-// クリア状況の小さいバッジ。
-// localStorage(外部ストア)を useSyncExternalStore で購読する。
-// サーバー側は必ず null を返す(getServerSnapshot)ことで、
-// ハイドレーション不一致エラーを起こさずにクライアントの値へ切り替えられる
-// この端末に遊びかけのログ(localStorage)があるか。
-// サーバー側は必ず false(getServerSnapshot)にしてハイドレーション不一致を避ける
+// この端末に遊びかけのログ(localStorage)が残っているか
 function readPlaying(puzzleId: string): boolean {
   try {
     const raw = localStorage.getItem(`umigame-play:${puzzleId}`);
@@ -20,6 +15,10 @@ function readPlaying(puzzleId: string): boolean {
   }
 }
 
+// クリア状況の小さいバッジ。
+// localStorage(外部ストア)を useSyncExternalStore で購読する。
+// サーバー側は必ず null / false を返す(第3引数のgetServerSnapshot)ことで、
+// ハイドレーション不一致エラーを起こさずにクライアントの値へ切り替えられる
 export default function ProgressBadge({ puzzleId }: { puzzleId: string }) {
   const status = useSyncExternalStore(
     subscribeToProgress,

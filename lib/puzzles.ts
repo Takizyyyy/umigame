@@ -5,20 +5,27 @@ import type { Puzzle, PuzzleMeta } from "@/lib/types";
 
 const puzzles = puzzlesData as Puzzle[];
 
+// 真相・ヒント本文・出典を落として、一覧やプレイ画面に渡してよい情報だけにする
+function toMeta({
+  id,
+  title,
+  difficulty,
+  question,
+  genre,
+  hints,
+}: Puzzle): PuzzleMeta {
+  return { id, title, difficulty, question, genre, hintCount: hints.length };
+}
+
 // 一覧表示用: 真相・ヒント・出典を含まない情報だけ返す
 export function getPuzzleMetas(): PuzzleMeta[] {
-  return puzzles.map(({ id, title, difficulty, question, genre, hints }) => ({
-    id,
-    title,
-    difficulty,
-    question,
-    genre,
-    hintCount: hints.length,
-  }));
+  return puzzles.map(toMeta);
 }
 
 export function getPuzzleMeta(id: string): PuzzleMeta | undefined {
-  return getPuzzleMetas().find((p) => p.id === id);
+  // 先に該当の1問を探してから変換する(全件変換してから探す必要はない)
+  const puzzle = puzzles.find((p) => p.id === id);
+  return puzzle && toMeta(puzzle);
 }
 
 // 判定API用: 真相を含む完全なデータ(サーバー内でのみ使う)

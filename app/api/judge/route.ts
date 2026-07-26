@@ -29,6 +29,14 @@ function isRateLimited(ip: string): boolean {
   if (timestamps.length >= RATE_LIMIT) return true;
   timestamps.push(now);
   requestLog.set(ip, timestamps);
+
+  // 一度きりの訪問者のIPも残り続けるとMapが際限なく太るので、
+  // ついでに時間切れのIPを掃除する(件数が少ないうちは何もしない)
+  if (requestLog.size > 1000) {
+    for (const [key, times] of requestLog) {
+      if (times.every((t) => now - t >= RATE_WINDOW_MS)) requestLog.delete(key);
+    }
+  }
   return false;
 }
 
