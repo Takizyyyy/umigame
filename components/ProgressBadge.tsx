@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { readProgress, subscribeToProgress } from "@/lib/progress";
+import { readProgress, subscribeToStorage } from "@/lib/progress";
 
 // この端末に遊びかけのログ(localStorage)が残っているか
 function readPlaying(puzzleId: string): boolean {
@@ -21,7 +21,7 @@ function readPlaying(puzzleId: string): boolean {
 // ハイドレーション不一致エラーを起こさずにクライアントの値へ切り替えられる
 export default function ProgressBadge({ puzzleId }: { puzzleId: string }) {
   const status = useSyncExternalStore(
-    subscribeToProgress,
+    subscribeToStorage,
     () => readProgress()[puzzleId]?.status ?? null,
     () => null
   );

@@ -174,19 +174,15 @@ export default function PlayClient({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // のこり質問が5回になったら一度だけ知らせる(30回の壁に突然ぶつからないように)
-  useEffect(() => {
-    if (result || MAX_QUESTIONS - questionCount !== 5) return;
-    const notice = "(質問はのこり5回! ヒントやギブアップも考えてみてね)";
-    setMessages((prev) =>
-      // 復元されたログに既に含まれている場合は二重に出さない
-      prev.some((m) => m.text === notice) ? prev : [...prev, { role: "ai", text: notice }],
-    );
-  }, [questionCount, result]);
-
   // 進行中のログをlocalStorage(タブやブラウザを閉じても残る)へ自動保存・復元する。
   // 「あそびかた」ページ等へ移動して戻ってきても、後日この端末で開き直しても続きから遊べるようにするため
   const storageKey = `umigame-play:${meta.id}`;
+  // set-state-in-effect を意図的に無効化する。
+  // このルールは「効果の中でsetStateすると再レンダリングが連鎖する」という警告だが、
+  // localStorageはサーバー側では読めないため、初回レンダリングを保存内容から始めると
+  // サーバーが描いたHTMLとクライアントの内容が食い違う(ハイドレーション不一致)。
+  // 「まず初期状態で描画 → マウント後に復元」はこれを避けるための定石で、
+  // マウント直後の1回だけしか走らないため連鎖レンダリングの心配もない
   useEffect(() => {
     try {
       const raw = localStorage.getItem(storageKey);
@@ -194,6 +190,7 @@ export default function PlayClient({
       const saved = JSON.parse(raw);
       // 挨拶1件だけの初期状態は復元しない(意味がないため)
       if (Array.isArray(saved.messages) && saved.messages.length > 1) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setMessages(saved.messages);
         setQuestionCount(saved.questionCount ?? 0);
         setHintsUsed(saved.hintsUsed ?? 0);
@@ -207,8 +204,6 @@ export default function PlayClient({
     } catch {
       // 保存データが壊れていたら初期状態で始める
     }
-    // 初回マウント時に1回だけ復元する
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
   useEffect(() => {
@@ -242,11 +237,18 @@ export default function PlayClient({
   }, [meta.id]);
 
   // 入力欄を内容に合わせて自動で伸縮させる。
-  // 1行固定のinputだと、スマホで長い質問を打つと横に流れて先頭が読めなくなるため
+  // 1行固定のinputだと、スマホで長い質問を打つと横に流れて先頭が読めなくなるため。
+  //
+  // immutability を意図的に無効化する。
+  // このルールは「効果の中でrefの中身を書き換えるな」という警告だが、
+  // textareaの高さは中身を実際に描画してみないと測れない(scrollHeight)ので、
+  // 描画後に走る効果の中でDOMを直接触るしかない。入力欄をonChangeでだけ伸ばすと、
+  // 送信後の自動クリアなど、コード側からinputを変えたときに高さが戻らなくなる
   const inputRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
+    // eslint-disable-next-line react-hooks/immutability
     el.style.height = "auto"; // 一度縮めてから実際の高さを測る(削除時に縮むように)
     el.style.height = `${el.scrollHeight}px`;
   }, [input]);
@@ -314,6 +316,18 @@ export default function PlayClient({
     if (questionCount === 0) setQuestionOpen(false);
     setQuestionCount((c) => c + 1);
 
+    // この送信でのこり5回になるなら、AIの返答に続けて一度だけ知らせる
+    // (30回の壁に突然ぶつからないように)。正解で終わる場合は出さない
+    const notice: ChatMessage[] =
+      MAX_QUESTIONS - (questionCount + 1) === 5
+        ? [
+            {
+              role: "ai",
+              text: "(質問はのこり5回! ヒントやギブアップも考えてみてね)",
+            },
+          ]
+        : [];
+
     if (mode === "answer") {
       if (data.verdict === "correct" && data.reveal) {
         setMessages((prev) => [...prev, { role: "ai", text: "正解!!" }]);
@@ -332,6 +346,7 @@ export default function PlayClient({
             role: "ai",
             text: `かなり惜しい!! ${data.comment ?? ""}`.trim(),
           },
+          ...notice,
         ]);
         return;
       }
@@ -341,6 +356,7 @@ export default function PlayClient({
           role: "ai",
           text: `残念、真相はそれじゃないみたい。${data.comment ?? ""}`.trim(),
         },
+        ...notice,
       ]);
       return;
     }
@@ -368,6 +384,7 @@ export default function PlayClient({
         verdict: data.verdict as Verdict,
         question: text,
       },
+      ...notice,
     ]);
   }
 

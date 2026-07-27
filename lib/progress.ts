@@ -36,8 +36,9 @@ export function saveProgress(
 }
 
 // useSyncExternalStore用の購読関数。
-// 他タブでの更新(storageイベント)を検知するために使う
-export function subscribeToProgress(callback: () => void) {
+// 他タブでlocalStorageが変わったこと(storageイベント)を検知するために使う。
+// クリア状況だけでなく、遊びかけログの監視にも共通で使う
+export function subscribeToStorage(callback: () => void) {
   if (typeof window === "undefined") return () => {};
   window.addEventListener("storage", callback);
   return () => window.removeEventListener("storage", callback);

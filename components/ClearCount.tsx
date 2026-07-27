@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { readProgress, subscribeToProgress } from "@/lib/progress";
+import { readProgress, subscribeToStorage } from "@/lib/progress";
 
 function countCleared() {
   return Object.values(readProgress()).filter((p) => p.status === "cleared")
@@ -13,7 +13,7 @@ function countCleared() {
 // サーバー側は 0 を返し、クライアントで実際のクリア数に切り替わる
 export default function ClearCount({ total }: { total: number }) {
   const clearedCount = useSyncExternalStore(
-    subscribeToProgress,
+    subscribeToStorage,
     countCleared,
     () => 0
   );
