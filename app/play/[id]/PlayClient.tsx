@@ -116,9 +116,26 @@ export default function PlayClient({
   const lastScrollTopRef = useRef(0);
   const upAccumRef = useRef(0);
 
+  // モーダルの開閉フォーカス管理用。開く直前にフォーカスしていた要素を覚えておき、
+  // 全部閉じたときに戻す(スクリーンリーダー・キーボード操作でフォーカスを見失わないため)
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const wasAnyOpenRef = useRef(false);
+  const boardPanelRef = useRef<HTMLDivElement>(null);
+  const sharedLogPanelRef = useRef<HTMLDivElement>(null);
+  const resultPanelRef = useRef<HTMLDivElement>(null);
+
   // オーバーレイ(わかったこと/結果/シェアログ)表示中は、Escで閉じ、背後のページのスクロールを止める
   useEffect(() => {
     const anyOpen = boardOpen || !!sharedLog || (!!result && resultOpen);
+
+    if (anyOpen && !wasAnyOpenRef.current) {
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
+    } else if (!anyOpen && wasAnyOpenRef.current) {
+      previousFocusRef.current?.focus();
+      previousFocusRef.current = null;
+    }
+    wasAnyOpenRef.current = anyOpen;
+
     if (!anyOpen) return;
 
     const onKey = (e: KeyboardEvent) => {
@@ -142,6 +159,18 @@ export default function PlayClient({
       style.overflow = prev;
     };
   }, [boardOpen, sharedLog, result, resultOpen]);
+
+  // モーダルが開いたら、パネル自体にフォーカスを移す(スクリーンリーダーに
+  // ダイアログの内容として読み上げさせ、キーボードフォーカスを見失わせないため)
+  useEffect(() => {
+    if (boardOpen) boardPanelRef.current?.focus();
+  }, [boardOpen]);
+  useEffect(() => {
+    if (sharedLog) sharedLogPanelRef.current?.focus();
+  }, [sharedLog]);
+  useEffect(() => {
+    if (result && resultOpen) resultPanelRef.current?.focus();
+  }, [result, resultOpen]);
 
   useEffect(() => {
     lastScrollTopRef.current = window.scrollY;
@@ -785,15 +814,20 @@ export default function PlayClient({
             className="fixed inset-0 z-20 flex items-end justify-center bg-stone-950/40 p-4 backdrop-blur-sm sm:items-center"
           >
             <motion.div
+              ref={boardPanelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="board-heading"
+              tabIndex={-1}
               initial={reduce ? false : { opacity: 0, y: 24, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={reduce ? undefined : { opacity: 0, y: 24, scale: 0.97 }}
               transition={{ type: "spring", stiffness: 300, damping: 28 }}
               onClick={(e) => e.stopPropagation()}
-              className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-stone-200 bg-[#fafaf8] p-6 shadow-xl shadow-stone-900/10"
+              className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-stone-200 bg-[#fafaf8] p-6 shadow-xl shadow-stone-900/10 outline-none"
             >
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-base font-bold tracking-tight">
+                <h2 id="board-heading" className="text-base font-bold tracking-tight">
                   これまでにわかったこと
                 </h2>
                 <button
@@ -881,15 +915,20 @@ export default function PlayClient({
             className="fixed inset-0 z-20 flex items-center justify-center bg-stone-950/40 p-4 backdrop-blur-sm"
           >
             <motion.div
+              ref={sharedLogPanelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="sharedlog-heading"
+              tabIndex={-1}
               initial={reduce ? false : { opacity: 0, y: 24, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ type: "spring", stiffness: 300, damping: 28 }}
-              className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-stone-200 bg-white p-7 shadow-xl shadow-stone-900/10"
+              className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-stone-200 bg-white p-7 shadow-xl shadow-stone-900/10 outline-none"
             >
               <p className="text-[11px] font-bold tracking-widest text-amber-700">
                 SHARED LOG
               </p>
-              <h2 className="mt-1 text-xl font-bold tracking-tight">
+              <h2 id="sharedlog-heading" className="mt-1 text-xl font-bold tracking-tight">
                 シェアされた質問ログ
               </h2>
               <p className="mt-1 text-sm text-stone-400">
@@ -947,15 +986,20 @@ export default function PlayClient({
             className="fixed inset-0 z-10 flex items-center justify-center bg-stone-950/40 p-4 backdrop-blur-sm"
           >
             <motion.div
+              ref={resultPanelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="result-heading"
+              tabIndex={-1}
               initial={reduce ? false : { opacity: 0, y: 24, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ type: "spring", stiffness: 300, damping: 28 }}
-              className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-stone-200 bg-white p-7 shadow-xl shadow-stone-900/10"
+              className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-stone-200 bg-white p-7 shadow-xl shadow-stone-900/10 outline-none"
             >
               <p className="text-[11px] font-bold tracking-widest text-amber-700">
                 {result.kind === "correct" ? "SOLVED" : "GIVE UP"}
               </p>
-              <h2 className="mt-1 text-2xl font-bold tracking-tight">
+              <h2 id="result-heading" className="mt-1 text-2xl font-bold tracking-tight">
                 {result.kind === "correct" ? "正解!" : "真相はこちら"}
               </h2>
               {result.kind === "correct" && (
