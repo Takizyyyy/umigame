@@ -22,27 +22,6 @@ body {
   overflow-wrap: anywhere;
 }
 
-/* 結果モーダルの登場アニメーション */
-@keyframes fadein {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes pop {
-  from {
-    opacity: 0;
-    transform: scale(0.96) translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
 /* 入力欄などのスクロールバーを見た目上だけ消す(長文時にスクロールする機能自体は残す) */
 .no-scrollbar {
   scrollbar-width: none; /* Firefox */

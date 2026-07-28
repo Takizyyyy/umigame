@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Zen_Kaku_Gothic_New } from "next/font/google";
+import { SITE_URL } from "@/lib/constants";
 import "./globals.css";
 
 // 端正な角ゴシック体の日本語Webフォント(ビルド時に取り込んで自前配信されるため
@@ -13,7 +14,7 @@ const zenKaku = Zen_Kaku_Gothic_New({
 
 export const metadata: Metadata = {
   // OGP画像などのURLを絶対パスにするための基準URL
-  metadataBase: new URL("https://umigame-chi.vercel.app"),
+  metadataBase: new URL(SITE_URL),
   title: "うんちくウミガメのスープ",
   description:
     "答えがうんちくになっている水平思考クイズ。AIに「はい/いいえ」で質問しながら真相を当てよう。",

@@ -7,7 +7,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { JudgeResponse, PuzzleMeta, Verdict } from "@/lib/types";
 import { readProgress, saveProgress } from "@/lib/progress";
 import { decodeLog, encodeLog } from "@/lib/sharelog";
-import { MAX_QUESTIONS } from "@/lib/constants";
+import { MAX_QUESTIONS, SITE_URL } from "@/lib/constants";
 import DifficultyBadge from "@/components/DifficultyBadge";
 
 type ChatMessage = {
@@ -457,7 +457,7 @@ export default function PlayClient({
 
   // クリア結果のシェア文(ネタバレなし: 問題名と回数だけ)
   function buildShareText() {
-    return `うんちくウミガメのスープ「${meta.title}」を質問${questionCount}回でクリア!\nhttps://umigame-chi.vercel.app/play/${meta.id}`;
+    return `うんちくウミガメのスープ「${meta.title}」を質問${questionCount}回でクリア!\n${SITE_URL}/play/${meta.id}`;
   }
 
   async function handleCopyShare() {
@@ -480,7 +480,7 @@ export default function PlayClient({
           t: m.text,
         })),
       });
-      const url = `https://umigame-chi.vercel.app/play/${meta.id}#log=${encoded}`;
+      const url = `${SITE_URL}/play/${meta.id}#log=${encoded}`;
       const head =
         result?.kind === "correct"
           ? `うんちくウミガメのスープ「${meta.title}」を質問${questionCount}回でクリア!`
