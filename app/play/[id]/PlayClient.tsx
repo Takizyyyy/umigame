@@ -321,6 +321,19 @@ export default function PlayClient({
       return;
     }
 
+    // APIは本来correctのときは必ずrevealを添えて返すが、通信の乱れ等で
+    // reveal無しのcorrectだけ届く可能性もゼロではない。その場合下の分岐に
+    // 素通りすると「不正解」等の誤った表示になるため、busy扱いにして
+    // 質問回数を消費せずやり直させる
+    if (data.verdict === "correct" && !data.reveal) {
+      setInput(text);
+      setMessages((prev) => [
+        ...prev,
+        { role: "ai", text: "今ちょっと混み合ってるみたい。少し待ってもう一度!" },
+      ]);
+      return;
+    }
+
     // 最初の送信が成功したら、問題文をたたんでチャット欄のスペースを広げる
     if (questionCount === 0) setQuestionOpen(false);
     setQuestionCount((c) => c + 1);
