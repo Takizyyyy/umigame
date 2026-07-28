@@ -18,6 +18,11 @@ export async function generateMetadata({
   };
 }
 
+// 問題データは20件でビルド時に確定しているため、全ページを事前生成(SSG)する
+export function generateStaticParams() {
+  return getPuzzleMetas().map((p) => ({ id: p.id }));
+}
+
 // サーバー側で問題情報(真相を含まないメタ情報のみ)を取り出して
 // クライアントコンポーネントに渡す
 export default async function PlayPage({
