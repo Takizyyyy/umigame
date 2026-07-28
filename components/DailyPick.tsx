@@ -5,11 +5,16 @@ import { useSyncExternalStore } from "react";
 import type { PuzzleMeta } from "@/lib/types";
 import DifficultyBadge from "./DifficultyBadge";
 
+// 日付は他タブの更新を追う必要がないため購読は空でよい。レンダーのたびに
+// 新しい関数を渡すとuseSyncExternalStoreが毎回再購読してしまうため、
+// モジュールスコープの同じ関数参照を渡す
+const noopSubscribe = () => () => {};
+
 // 今日の日付(端末のローカル時刻)。サーバーでは null を返して
 // ハイドレーション不一致を避け、クライアントで日付が入ってから表示する
 function useTodayKey() {
   return useSyncExternalStore(
-    () => () => {},
+    noopSubscribe,
     () => {
       const d = new Date();
       return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;

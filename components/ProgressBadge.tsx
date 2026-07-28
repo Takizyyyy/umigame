@@ -3,6 +3,11 @@
 import { useSyncExternalStore } from "react";
 import { readProgress, subscribeToStorage } from "@/lib/progress";
 
+// 表示中に他タブでの更新まで追う必要はないため、購読関数は空でよい。
+// レンダーのたびに新しい関数を渡すとuseSyncExternalStoreが毎回再購読してしまうため、
+// モジュールスコープの同じ関数参照を渡す
+const noopSubscribe = () => () => {};
+
 // この端末に遊びかけのログ(localStorage)が残っているか
 function readPlaying(puzzleId: string): boolean {
   try {
@@ -26,8 +31,7 @@ export default function ProgressBadge({ puzzleId }: { puzzleId: string }) {
     () => null
   );
   const playing = useSyncExternalStore(
-    // 表示中に他タブでの更新まで追う必要はないため購読は空でよい(表示のたびに読み直す)
-    () => () => {},
+    noopSubscribe,
     () => readPlaying(puzzleId),
     () => false
   );
