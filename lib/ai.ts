@@ -1,5 +1,7 @@
 // LLM呼び出しはこのファイルに隔離する(プロバイダを替えるときはここだけ直す)
 // このファイルはサーバー側専用。APIキーは環境変数からのみ読む。
+// → server-only を import し、'use client' から誤って読み込まれたらビルド時に気づけるようにする
+import "server-only";
 import { GoogleGenAI, Type } from "@google/genai";
 import type { GenerateContentConfig } from "@google/genai";
 import type { AnswerVerdict, Verdict } from "@/lib/types";

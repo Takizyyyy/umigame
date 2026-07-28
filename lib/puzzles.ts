@@ -1,5 +1,8 @@
 // 問題データの読み込み。このファイルはサーバー側専用。
 // ※クライアントコンポーネントから import しないこと(真相が漏れるため)
+// → server-only を import しておくことで、'use client' から読み込まれた瞬間に
+//   ビルドエラーになり、コメントだけに頼らず機械的に守れるようにする
+import "server-only";
 import puzzlesData from "@/data/puzzles.json";
 import type { Puzzle, PuzzleMeta } from "@/lib/types";
 
