@@ -177,6 +177,10 @@ export default function PlayClient({
   // 進行中のログをlocalStorage(タブやブラウザを閉じても残る)へ自動保存・復元する。
   // 「あそびかた」ページ等へ移動して戻ってきても、後日この端末で開き直しても続きから遊べるようにするため
   const storageKey = `umigame-play:${meta.id}`;
+  // 復元effectが完了するまで保存effectを走らせないためのフラグ。
+  // これが無いと、マウント直後に「復元前の初期状態」で保存effectが1回先に走り、
+  // 直後に復元されるまでの一瞬、保存済みログが初期状態で上書きされる隙ができる
+  const restoredRef = useRef(false);
   // set-state-in-effect を意図的に無効化する。
   // このルールは「効果の中でsetStateすると再レンダリングが連鎖する」という警告だが、
   // localStorageはサーバー側では読めないため、初回レンダリングを保存内容から始めると
@@ -203,10 +207,15 @@ export default function PlayClient({
       }
     } catch {
       // 保存データが壊れていたら初期状態で始める
+    } finally {
+      restoredRef.current = true;
     }
   }, [storageKey]);
 
   useEffect(() => {
+    // 復元が終わる前(マウント直後の1回)は保存しない。ここで保存してしまうと
+    // 直後に走る復元処理が読む前に、保存済みログを初期状態で上書きしてしまう
+    if (!restoredRef.current) return;
     try {
       localStorage.setItem(
         storageKey,
