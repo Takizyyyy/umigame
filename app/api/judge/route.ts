@@ -1,9 +1,9 @@
 import { judge, judgeAnswer } from "@/lib/ai";
 import { getPuzzle } from "@/lib/puzzles";
+import { MAX_QUESTIONS } from "@/lib/constants";
 import type { JudgeRequest, JudgeResponse } from "@/lib/types";
 
 const MAX_MESSAGE_LENGTH = 200;
-const MAX_QUESTIONS = 30;
 
 // 簡易レート制限: 同一IPから60秒に20回まで
 // (サーバーレスではインスタンスごとのメモリなので完全ではないが、

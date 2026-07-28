@@ -7,6 +7,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { JudgeResponse, PuzzleMeta, Verdict } from "@/lib/types";
 import { readProgress, saveProgress } from "@/lib/progress";
 import { decodeLog, encodeLog } from "@/lib/sharelog";
+import { MAX_QUESTIONS } from "@/lib/constants";
 import DifficultyBadge from "@/components/DifficultyBadge";
 
 type ChatMessage = {
@@ -26,7 +27,6 @@ const VERDICT_TEXT: Record<string, string> = {
   unclear: "うーん、「はい/いいえ」で答えられる質問にしてね",
 };
 
-const MAX_QUESTIONS = 30;
 const MAX_HINTS = 3;
 
 type Mode = "question" | "answer";
