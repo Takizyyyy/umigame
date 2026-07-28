@@ -15,7 +15,14 @@ export function readProgress(): ProgressMap {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
-    return JSON.parse(raw) as ProgressMap;
+    const parsed: unknown = JSON.parse(raw);
+    // 拡張機能等による書き換えでnullや配列が入っていることがある。
+    // 形が想定と違えば空扱いにし、呼び出し側(ProgressBadge等)が
+    // parsed[puzzleId] で例外を投げて画面が真っ白になるのを防ぐ
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return {};
+    }
+    return parsed as ProgressMap;
   } catch {
     return {};
   }
