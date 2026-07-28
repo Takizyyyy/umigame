@@ -43,11 +43,17 @@ function isRateLimited(ip: string): boolean {
 // ブラウザからの同一オリジンfetchは自動でOriginヘッダーを付けるため、
 // これが無い/自サイトと違うリクエストは弾く。ヘッダーは詐称できるので
 // 本気の攻撃者は防げないが、雑なスクリプト・外部からの直叩きボットは止まる
+//
+// 比較先はhostではなくx-forwarded-hostを優先する。Vercelなどプロキシ経由の
+// 環境ではhostがプロキシ内部のホスト名になり、本来のアクセス先ドメインと
+// 食い違って正規のリクエストまで弾いてしまうことがあるため
 function isSameOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
   if (!origin) return false;
+  const host =
+    request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   try {
-    return new URL(origin).host === request.headers.get("host");
+    return new URL(origin).host === host;
   } catch {
     return false;
   }
