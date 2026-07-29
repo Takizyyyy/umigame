@@ -333,8 +333,10 @@ export default function PlayClient({
 
     if (!data) {
       setInput(text); // 打った文を消さずに入力欄へ戻す(打ち直しさせない)
+      // 直前に足した自分の発言(player)を取り除いてからAI側のメッセージを足す。
+      // 残したままだと、この文を再送信したときに同じ質問が履歴に2回出てしまう
       setMessages((prev) => [
-        ...prev,
+        ...prev.slice(0, -1),
         { role: "ai", text: "通信エラー。もう一度試してね" },
       ]);
       return;
@@ -343,8 +345,9 @@ export default function PlayClient({
     // AI側が混雑・上限で判定できなかったとき: 質問回数を消費させず、入力も返す
     if (data.busy) {
       setInput(text);
+      // 直前の自分の発言を取り除いてから足す(理由は上のコメントと同じ)
       setMessages((prev) => [
-        ...prev,
+        ...prev.slice(0, -1),
         { role: "ai", text: "今ちょっと混み合ってるみたい。少し待ってもう一度!" },
       ]);
       return;
@@ -356,8 +359,9 @@ export default function PlayClient({
     // 質問回数を消費せずやり直させる
     if (data.verdict === "correct" && !data.reveal) {
       setInput(text);
+      // 直前の自分の発言を取り除いてから足す(理由は上のコメントと同じ)
       setMessages((prev) => [
-        ...prev,
+        ...prev.slice(0, -1),
         { role: "ai", text: "今ちょっと混み合ってるみたい。少し待ってもう一度!" },
       ]);
       return;
@@ -375,6 +379,19 @@ export default function PlayClient({
             {
               role: "ai",
               text: "(質問はのこり5回! ヒントやギブアップも考えてみてね)",
+            },
+          ]
+        : [];
+
+    // 質問モードで最初の1問を送った直後だけ、AIの返答に続けて一度だけ案内を出す。
+    // 「自分の発言(黒い吹き出し)はタップで入力欄に戻せる」機能は title属性の
+    // ツールチップ頼りで、スマホではまず気づかれないため
+    const tip: ChatMessage[] =
+      mode === "question" && questionCount === 0
+        ? [
+            {
+              role: "ai",
+              text: "💡 自分の質問(黒い吹き出し)はタップすると入力欄に戻せるよ",
             },
           ]
         : [];
@@ -435,6 +452,7 @@ export default function PlayClient({
         verdict: data.verdict as Verdict,
         question: text,
       },
+      ...tip,
       ...notice,
     ]);
   }
@@ -536,6 +554,11 @@ export default function PlayClient({
   const knownYes = messages.filter((m) => m.verdict === "yes" && m.question);
   const knownNo = messages.filter((m) => m.verdict === "no" && m.question);
   const knownHints = messages.filter((m) => m.role === "hint");
+  // 「関係ない/よくわからない」判定の質問。手がかりにはならないので一覧には出すが、
+  // バッジの件数(knownTotal)には含めない
+  const knownOther = messages.filter(
+    (m) => (m.verdict === "irrelevant" || m.verdict === "unclear") && m.question
+  );
   const knownTotal = knownYes.length + knownNo.length + knownHints.length;
 
   return (
@@ -740,6 +763,31 @@ export default function PlayClient({
               </button>
             </div>
 
+            {/* 定型質問チップ: 質問モードのときだけ出す補助。タップで入力欄にセットするだけで
+                送信はしない(そのまま送るとズレた質問になりがちなので、書き足して調整させる) */}
+            {mode === "question" && (
+              <div className="mb-2 flex flex-wrap gap-2">
+                {[
+                  "それは人間に関係していますか?",
+                  "それは屋外で起きたことですか?",
+                  "それは日常でよくあることですか?",
+                ].map((q) => (
+                  <button
+                    key={q}
+                    type="button"
+                    onClick={() => {
+                      setInput(q);
+                      inputRef.current?.focus();
+                    }}
+                    disabled={sending || !!result}
+                    className="rounded-full border border-stone-200 bg-white px-3 py-1 text-xs text-stone-600 transition hover:border-stone-400 disabled:opacity-30"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* 文字数カウンター(200字上限を最初から見せておく) */}
             <div className="mb-1 text-right text-[11px] tabular-nums text-stone-400">
               {input.length}/200
@@ -839,7 +887,7 @@ export default function PlayClient({
                 </button>
               </div>
 
-              {knownTotal === 0 ? (
+              {knownTotal === 0 && knownOther.length === 0 ? (
                 <p className="py-8 text-center text-sm leading-7 text-stone-400">
                   まだ手がかりはありません。
                   <br />
@@ -893,6 +941,23 @@ export default function PlayClient({
                             className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-stone-700"
                           >
                             {m.text}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                  {knownOther.length > 0 && (
+                    <section>
+                      <h3 className="mb-2 text-sm font-bold text-stone-500">
+                        △ 手がかりにならなかった質問({knownOther.length})
+                      </h3>
+                      <ul className="space-y-1.5">
+                        {knownOther.map((m, i) => (
+                          <li
+                            key={i}
+                            className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm leading-6 text-stone-700"
+                          >
+                            {m.question}
                           </li>
                         ))}
                       </ul>
