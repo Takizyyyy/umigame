@@ -2,14 +2,21 @@
 
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
+import { readProgress } from "@/lib/progress";
 
-// 一覧からランダムに1問選んで遷移するボタン
+// 一覧からランダムに1問選んで遷移するボタン。
+// PlayClientの「つぎの問題へ」と同じ考え方で、未挑戦の問題があればその中から選ぶ
+// (クリア済み・真相を見た問題ばかり引いて損した気分にさせないため)。
+// 全問挑戦済みなら、そのときだけ全体からランダムに選ぶ
 export default function RandomPickButton({ ids }: { ids: string[] }) {
   const router = useRouter();
   const reduce = useReducedMotion();
 
   function handleClick() {
-    const id = ids[Math.floor(Math.random() * ids.length)];
+    const progress = readProgress();
+    const untried = ids.filter((id) => !progress[id]);
+    const pool = untried.length > 0 ? untried : ids;
+    const id = pool[Math.floor(Math.random() * pool.length)];
     router.push(`/play/${id}`);
   }
 
