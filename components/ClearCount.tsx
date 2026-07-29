@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import { readProgress, subscribeToStorage } from "@/lib/progress";
 
 function countCleared() {
-  return Object.values(readProgress()).filter((p) => p.status === "cleared")
+  return Object.values(readProgress()).filter((p) => p?.status === "cleared")
     .length;
 }
 

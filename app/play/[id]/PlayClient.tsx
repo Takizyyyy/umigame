@@ -547,7 +547,12 @@ export default function PlayClient({
       if (readProgress()[meta.id]?.status !== "cleared") {
         saveProgress(meta.id, { status: "revealed" });
       }
+      return;
     }
+    setMessages((prev) => [
+      ...prev,
+      { role: "ai", text: "通信エラー。もう一度試してね" },
+    ]);
   }
 
   // 「わかったこと」一覧の中身。はい/いいえと判定された質問、使ったヒントを集める
