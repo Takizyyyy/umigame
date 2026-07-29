@@ -2,23 +2,12 @@
 
 import { useSyncExternalStore } from "react";
 import { readProgress, subscribeToStorage } from "@/lib/progress";
+import { readPlaying } from "@/lib/playLog";
 
 // 表示中に他タブでの更新まで追う必要はないため、購読関数は空でよい。
 // レンダーのたびに新しい関数を渡すとuseSyncExternalStoreが毎回再購読してしまうため、
 // モジュールスコープの同じ関数参照を渡す
 const noopSubscribe = () => () => {};
-
-// この端末に遊びかけのログ(localStorage)が残っているか
-function readPlaying(puzzleId: string): boolean {
-  try {
-    const raw = localStorage.getItem(`umigame-play:${puzzleId}`);
-    if (!raw) return false;
-    const saved = JSON.parse(raw);
-    return Array.isArray(saved.messages) && saved.messages.length > 1 && !saved.result;
-  } catch {
-    return false;
-  }
-}
 
 // クリア状況の小さいバッジ。
 // localStorage(外部ストア)を useSyncExternalStore で購読する。

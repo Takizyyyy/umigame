@@ -6,8 +6,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { JudgeResponse, PuzzleMeta, Verdict } from "@/lib/types";
 import { readProgress, saveProgress } from "@/lib/progress";
-import { decodeLog, encodeLog } from "@/lib/sharelog";
-import { MAX_QUESTIONS, SITE_URL } from "@/lib/constants";
+import { decodeLog, encodeLog, fromShortRole, toShortRole } from "@/lib/sharelog";
+import { playLogKey } from "@/lib/playLog";
+import { MAX_MESSAGE_LENGTH, MAX_QUESTIONS, SITE_URL } from "@/lib/constants";
 import DifficultyBadge from "@/components/DifficultyBadge";
 
 type ChatMessage = {
@@ -26,8 +27,6 @@ const VERDICT_TEXT: Record<string, string> = {
   irrelevant: "関係ありません",
   unclear: "うーん、「はい/いいえ」で答えられる質問にしてね",
 };
-
-const MAX_HINTS = 3;
 
 type Mode = "question" | "answer";
 
@@ -205,7 +204,7 @@ export default function PlayClient({
 
   // 進行中のログをlocalStorage(タブやブラウザを閉じても残る)へ自動保存・復元する。
   // 「あそびかた」ページ等へ移動して戻ってきても、後日この端末で開き直しても続きから遊べるようにするため
-  const storageKey = `umigame-play:${meta.id}`;
+  const storageKey = playLogKey(meta.id);
   // 復元effectが完了するまで保存effectを走らせないためのフラグ。
   // これが無いと、マウント直後に「復元前の初期状態」で保存effectが1回先に走り、
   // 直後に復元されるまでの一瞬、保存済みログが初期状態で上書きされる隙ができる
@@ -269,8 +268,7 @@ export default function PlayClient({
     if (!match) return;
     decodeLog(match[1]).then((data) => {
       if (!data || data.puzzleId !== meta.id) return;
-      const roleOf = { p: "player", a: "ai", h: "hint" } as const;
-      setSharedLog(data.log.map((m) => ({ role: roleOf[m.r], text: m.t })));
+      setSharedLog(data.log.map((m) => ({ role: fromShortRole(m.r), text: m.t })));
     });
   }, [meta.id]);
 
@@ -458,7 +456,7 @@ export default function PlayClient({
   }
 
   async function handleHint() {
-    if (sending || result || hintsUsed >= MAX_HINTS) return;
+    if (sending || result || hintsUsed >= meta.hintCount) return;
     setSending(true);
     const data = await callJudge({ action: "hint", hintIndex: hintsUsed });
     setSending(false);
@@ -493,10 +491,7 @@ export default function PlayClient({
     try {
       const encoded = await encodeLog({
         puzzleId: meta.id,
-        log: messages.map((m) => ({
-          r: m.role === "player" ? "p" : m.role === "hint" ? "h" : "a",
-          t: m.text,
-        })),
+        log: messages.map((m) => ({ r: toShortRole(m.role), t: m.text })),
       });
       const url = `${SITE_URL}/play/${meta.id}#log=${encoded}`;
       const head =
@@ -795,7 +790,7 @@ export default function PlayClient({
 
             {/* 文字数カウンター(200字上限を最初から見せておく) */}
             <div className="mb-1 text-right text-[11px] tabular-nums text-stone-400">
-              {input.length}/200
+              {input.length}/{MAX_MESSAGE_LENGTH}
             </div>
             <div className="flex items-end gap-2">
               {/* 文字サイズ: スマホ(sm未満)は16px(text-base)。
@@ -813,7 +808,7 @@ export default function PlayClient({
                     handleSend();
                   }
                 }}
-                maxLength={200}
+                maxLength={MAX_MESSAGE_LENGTH}
                 disabled={sending || !!result}
                 aria-label={mode === "question" ? "質問を入力" : "解答を入力"}
                 placeholder={
@@ -836,10 +831,10 @@ export default function PlayClient({
               <div className="flex items-center justify-between text-xs">
                 <button
                   onClick={handleHint}
-                  disabled={sending || !!result || hintsUsed >= MAX_HINTS}
+                  disabled={sending || !!result || hintsUsed >= meta.hintCount}
                   className="font-medium text-amber-700 transition hover:opacity-70 disabled:opacity-30"
                 >
-                  ヒントを見る(残り{MAX_HINTS - hintsUsed})
+                  ヒントを見る(残り{meta.hintCount - hintsUsed})
                 </button>
                 {!result && (
                   <button

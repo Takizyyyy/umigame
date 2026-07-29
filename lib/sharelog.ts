@@ -14,6 +14,19 @@ export interface SharedLog {
   log: SharedLogEntry[];
 }
 
+// ChatMessageのrole("player"/"ai"/"hint")とSharedLogEntryのr("p"/"a"/"h")の変換。
+// この対応表を両方向の唯一の定義元にする(呼び出し側で独自に分岐させない)
+const ROLE_TO_SHORT = { player: "p", ai: "a", hint: "h" } as const;
+const SHORT_TO_ROLE = { p: "player", a: "ai", h: "hint" } as const;
+
+export function toShortRole(role: keyof typeof ROLE_TO_SHORT): SharedLogEntry["r"] {
+  return ROLE_TO_SHORT[role];
+}
+
+export function fromShortRole(r: SharedLogEntry["r"]): keyof typeof ROLE_TO_SHORT {
+  return SHORT_TO_ROLE[r];
+}
+
 async function streamToBytes(stream: ReadableStream): Promise<Uint8Array> {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
