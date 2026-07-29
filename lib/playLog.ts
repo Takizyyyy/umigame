@@ -43,10 +43,10 @@ export type ContinueEntry = {
 // 遊びかけのものの中でupdatedAtが一番新しい1件だけ選ぶ
 export function findLatestContinue(): ContinueEntry | null {
   let latest: (ContinueEntry & { updatedAt: number }) | null = null;
-  try {
-    for (let i = 0; i < window.localStorage.length; i++) {
-      const key = window.localStorage.key(i);
-      if (!key || !key.startsWith(PLAY_LOG_PREFIX)) continue;
+  for (let i = 0; i < window.localStorage.length; i++) {
+    const key = window.localStorage.key(i);
+    if (!key || !key.startsWith(PLAY_LOG_PREFIX)) continue;
+    try {
       const raw = window.localStorage.getItem(key);
       if (!raw) continue;
       const saved: StoredPlayLog = JSON.parse(raw);
@@ -60,9 +60,10 @@ export function findLatestContinue(): ContinueEntry | null {
           updatedAt,
         };
       }
+    } catch {
+      // このキーの保存データだけ壊れていた場合はスキップして次へ
+      continue;
     }
-  } catch {
-    // 保存データが壊れていたら「なし」として扱う
   }
   return latest;
 }

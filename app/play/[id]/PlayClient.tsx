@@ -215,23 +215,63 @@ export default function PlayClient({
   // サーバーが描いたHTMLとクライアントの内容が食い違う(ハイドレーション不一致)。
   // 「まず初期状態で描画 → マウント後に復元」はこれを避けるための定石で、
   // マウント直後の1回だけしか走らないため連鎖レンダリングの心配もない
+  function isValidChatMessage(m: unknown): m is ChatMessage {
+    if (!m || typeof m !== "object") return false;
+    const obj = m as Record<string, unknown>;
+    return (
+      (obj.role === "player" || obj.role === "ai" || obj.role === "hint") &&
+      typeof obj.text === "string"
+    );
+  }
+
+  function isValidResult(
+    r: unknown
+  ): r is {
+    kind: "correct" | "giveup";
+    truth: string;
+    trivia: string;
+    sources: { title: string; url: string }[];
+  } {
+    if (!r || typeof r !== "object") return false;
+    const obj = r as Record<string, unknown>;
+    return (
+      (obj.kind === "correct" || obj.kind === "giveup") &&
+      typeof obj.truth === "string" &&
+      typeof obj.trivia === "string" &&
+      Array.isArray(obj.sources) &&
+      obj.sources.every(
+        (s) =>
+          !!s &&
+          typeof s === "object" &&
+          typeof (s as Record<string, unknown>).title === "string" &&
+          typeof (s as Record<string, unknown>).url === "string"
+      )
+    );
+  }
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem(storageKey);
       if (!raw) return;
       const saved = JSON.parse(raw);
+      const messages: ChatMessage[] = Array.isArray(saved.messages)
+        ? saved.messages.filter(isValidChatMessage)
+        : [];
       // 挨拶1件だけの初期状態は復元しない(意味がないため)
-      if (Array.isArray(saved.messages) && saved.messages.length > 1) {
+      if (messages.length > 1) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        setMessages(saved.messages);
+        setMessages(messages);
         setQuestionCount(saved.questionCount ?? 0);
         setHintsUsed(saved.hintsUsed ?? 0);
         setMode(saved.mode === "answer" ? "answer" : "question");
-        if (saved.result) setResult(saved.result);
         // プレイヤーの発言が既にあるなら、続きから遊ぶ想定なので問題文はたたんでおく
-        if (saved.messages.some((m: ChatMessage) => m.role === "player")) {
+        if (messages.some((m) => m.role === "player")) {
           setQuestionOpen(false);
         }
+      }
+      // 真相の表示は質問回数に関係なく復元する(即ギブアップでも消えないように)
+      if (isValidResult(saved.result)) {
+        setResult(saved.result);
       }
     } catch {
       // 保存データが壊れていたら初期状態で始める
@@ -460,6 +500,13 @@ export default function PlayClient({
     setSending(true);
     const data = await callJudge({ action: "hint", hintIndex: hintsUsed });
     setSending(false);
+    if (data?.busy) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "ai", text: "今ちょっと混み合ってるみたい。少し待ってもう一度!" },
+      ]);
+      return;
+    }
     if (!data?.hint) {
       setMessages((prev) => [
         ...prev,
@@ -535,6 +582,13 @@ export default function PlayClient({
     setSending(true);
     const data = await callJudge({ action: "giveup" });
     setSending(false);
+    if (data?.busy) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "ai", text: "今ちょっと混み合ってるみたい。少し待ってもう一度!" },
+      ]);
+      return;
+    }
     if (data?.reveal) {
       setResult({ kind: "giveup", ...data.reveal });
       setResultOpen(true);
