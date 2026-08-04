@@ -27,7 +27,7 @@
 | 📚 出典つき解説 | 正解・ギブアップ後に真相+うんちく+出典リンクを表示 |
 | 🏷️ 問題のえらび方 | ジャンル別(5種)/難易度別(3段階)/未挑戦を優先するランダム1問 |
 | ✅ クリア記録 | localStorageに保存(サーバーには送らない)。一覧にバッジ表示 |
-| 🕊️ 結果シェア | クリア結果をXやコピーで共有(問題名と質問回数のみ、ネタバレなし) |
+| 🕊️ 結果シェア | クリア結果をXやコピーで共有 |
 | 🔗 質問ログ付きシェア | 挑戦中の質問のやりとりを**URLに埋め込んで**共有。受け取った人はログを読んで、そのまま自分も挑戦できる |
 | 📱 スマホ最適化 | 自動で伸びる入力欄、フォーカス時の勝手なズーム防止、送った質問のタップ再利用(ちょい変え再質問) |
 
@@ -66,13 +66,3 @@ flowchart LR
 Next.js (App Router) / TypeScript / Tailwind CSS / Gemini API(無料枠) / Vercel
 
 DBは使っていません(問題データはリポジトリ内のJSON、クリア記録はブラウザのlocalStorage)。**運用コストは0円です。**
-
-## ローカルで動かす
-
-```bash
-git clone https://github.com/Takizyyyy/umigame.git
-cd umigame
-npm install
-cp .env.example .env.local   # GEMINI_API_KEY に Google AI Studio のキーを設定
-npm run dev
-```
